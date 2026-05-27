@@ -44,7 +44,7 @@ npm run dev:api
 ```
 
 - Frontend: http://localhost:5173
-- API health: http://localhost:5000/api/health
+- API health: http://localhost:5001/api/health (port 5000 reserved for other apps, e.g. University Student Hub)
 
 The frontend still uses local mock state in `frontend/src/store.tsx`. API routes are scaffolded for future wiring.
 
