@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../translations';
+import { gamesApi, ApiError } from '../lib/api';
 
 const PICK_COUNT = 6;
 const POOL = Array.from({ length: 42 }, (_, i) => i + 1);
@@ -19,13 +20,14 @@ const PAYOUT_TIERS = [
 ];
 
 export default function Draw() {
-  const { state, lang, deductBalance, spendStars, addTransaction, addNotification, addTicket, recordPlay } = useStore();
+  const { state, lang, syncGameResponse } = useStore();
   const [picks, setPicks] = useState<number[]>([]);
   const [entryType, setEntryType] = useState('stars');
   const [suggestUsed, setSuggestUsed] = useState(0);
   const [suggestedNums, setSuggestedNums] = useState<number[]>([]);
   const [entries, setEntries] = useState(0);
   const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const showT = (msg: string, cls: string) => { setToast({ msg, cls }); setTimeout(() => setToast(null), 3000); };
 
@@ -43,34 +45,33 @@ export default function Draw() {
 
   const useSuggestion = () => {
     if (suggestUsed >= 3) return;
-    const cost = suggestUsed === 0 ? 0 : 1;
-    if (cost > 0 && state.balance < 1) { showT('Insufficient balance for suggestion', 'tx'); return; }
-    if (cost > 0) deductBalance(1);
     const s = new Set<number>();
     while (s.size < PICK_COUNT) s.add(Math.floor(Math.random() * 42) + 1);
     setSuggestedNums([...s].sort((a, b) => a - b));
     setSuggestUsed(n => n + 1);
-    showT(cost > 0 ? 'Suggested numbers shown below — 1 ETB charged. Click any to add.' : 'Suggested numbers shown below — free. Click any to add.', 'ts');
+    showT('Suggested numbers shown below — click any to add.', 'ts');
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (picks.length < PICK_COUNT) { showT(`Pick ${PICK_COUNT} numbers to confirm`, 'tx'); return; }
     const opt = ENTRY_OPTIONS.find(o => o.id === entryType)!;
     if (opt.cashCost > 0 && state.balance < opt.cashCost) { showT('Insufficient balance', 'tx'); return; }
     if (opt.starsCost > 0 && state.starsBalance < opt.starsCost) {
       showT(`You need ${opt.starsCost} Stars — earn more by playing`, 'tx'); return;
     }
-    if (opt.cashCost > 0) deductBalance(opt.cashCost);
-    if (opt.starsCost > 0) spendStars(opt.starsCost);
-    if (opt.cashCost > 0) addTransaction(`Crown Draw — ${opt.sub}`, -opt.cashCost, 'out');
-    if (opt.starsCost > 0) addTransaction(`Crown Draw — Stars used`, -opt.starsCost, 'star');
-    addTicket();
-    addNotification('ti-circle-check', 'tg', `Crown Draw entry confirmed — June 15`);
-    recordPlay();
-    setEntries(n => n + 1);
-    setPicks([]);
-    setSuggestUsed(0);
-    showT(t(lang, 'entryConfirmed'), 'ts');
+    setSubmitting(true);
+    try {
+      const res = await gamesApi.drawEnter({ numbers: picks, option: entryType });
+      syncGameResponse(res);
+      setEntries(n => n + 1);
+      setPicks([]);
+      setSuggestUsed(0);
+      showT(t(lang, 'entryConfirmed'), 'ts');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Entry failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const selected = ENTRY_OPTIONS.find(o => o.id === entryType)!;
@@ -157,9 +158,9 @@ export default function Draw() {
               className={picks.length === PICK_COUNT ? 'abtn' : 'sbtn'}
               style={{ flex: 1, fontSize: 11, padding: '7px 12px' }}
               onClick={confirm}
-              disabled={picks.length < PICK_COUNT}
+              disabled={picks.length < PICK_COUNT || submitting}
             >
-              {t(lang, 'confirm')} — {selected.sub}
+              {submitting ? 'Confirming...' : `${t(lang, 'confirm')} — ${selected.sub}`}
             </button>
           </div>
 

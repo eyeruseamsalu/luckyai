@@ -1,56 +1,92 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../translations';
+import { gamesApi, ApiError } from '../lib/api';
 
 const CROWN_STAR_COST = 1500;
 const WEEKLY_STAR_COST = 800;
 const CROWN_HYBRID_STAR = 750;
 const CROWN_HYBRID_CASH = 250;
 
+function quickPickNumbers(count: number, max: number): number[] {
+  const s = new Set<number>();
+  while (s.size < count) s.add(Math.floor(Math.random() * max) + 1);
+  return [...s].sort((a, b) => a - b);
+}
+
 export default function Stars() {
-  const { state, lang, spendStars, deductBalance, addTransaction, addNotification, addTicket, goPage } = useStore();
+  const { state, lang, syncGameResponse, goPage } = useStore();
   const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const showT = (msg: string, cls: string) => { setToast({ msg, cls }); setTimeout(() => setToast(null), 3500); };
 
   const crownPct = Math.min(100, Math.round((state.starsBalance / CROWN_STAR_COST) * 100));
   const weeklyPct = Math.min(100, Math.round((state.starsBalance / WEEKLY_STAR_COST) * 100));
 
-  const enterCrownStars = () => {
+  const enterCrownStars = async () => {
     if (state.starsBalance < CROWN_STAR_COST) {
       showT(`You need ${CROWN_STAR_COST - state.starsBalance} more Stars`, 'tx'); return;
     }
-    spendStars(CROWN_STAR_COST);
-    addTransaction('Crown Draw — Stars entry', -CROWN_STAR_COST, 'star');
-    addTicket();
-    addNotification('ti-trophy', 'ta', 'Crown Draw entry added with Stars — June 15');
-    showT(t(lang, 'entryConfirmed'), 'tstar');
+    setSubmitting(true);
+    try {
+      const res = await gamesApi.starsCrown({ mode: 'stars' });
+      syncGameResponse(res);
+      showT(t(lang, 'entryConfirmed'), 'tstar');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Entry failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const enterCrownHybrid = () => {
+  const enterCrownHybrid = async () => {
     if (state.starsBalance < CROWN_HYBRID_STAR) {
       showT(`Need ${CROWN_HYBRID_STAR} Stars for hybrid entry`, 'tx'); return;
     }
     if (state.balance < CROWN_HYBRID_CASH) {
       showT(`Need ${CROWN_HYBRID_CASH} ETB for hybrid entry`, 'tx'); return;
     }
-    spendStars(CROWN_HYBRID_STAR);
-    deductBalance(CROWN_HYBRID_CASH);
-    addTransaction('Crown Draw — Hybrid entry (Stars)', -CROWN_HYBRID_STAR, 'star');
-    addTransaction('Crown Draw — Hybrid entry (ETB)', -CROWN_HYBRID_CASH, 'out');
-    addTicket();
-    addNotification('ti-trophy', 'ta', 'Crown Draw hybrid entry confirmed — June 15');
-    showT(t(lang, 'entryConfirmed'), 'tstar');
+    setSubmitting(true);
+    try {
+      const res = await gamesApi.starsCrown({ mode: 'hybrid' });
+      syncGameResponse(res);
+      showT(t(lang, 'entryConfirmed'), 'tstar');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Entry failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const enterWeekly = () => {
+  const enterCrownCash = async () => {
+    if (state.balance < 500) { showT('Insufficient balance', 'tx'); return; }
+    setSubmitting(true);
+    try {
+      const res = await gamesApi.drawEnter({ numbers: quickPickNumbers(6, 42), option: 'cash' });
+      syncGameResponse(res);
+      showT(t(lang, 'entryConfirmed'), 'ts');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Entry failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const enterWeekly = async () => {
     if (state.starsBalance < WEEKLY_STAR_COST) {
       showT(`You need ${WEEKLY_STAR_COST - state.starsBalance} more Stars for the weekly draw`, 'tx'); return;
     }
-    spendStars(WEEKLY_STAR_COST);
-    addTransaction('Weekly 100K Draw — Stars entry', -WEEKLY_STAR_COST, 'star');
-    addNotification('ti-trophy', 'tp', 'Weekly 100,000 ETB draw entry confirmed');
-    showT('Weekly 100K draw entry confirmed.', 'tstar');
+    setSubmitting(true);
+    try {
+      const res = await gamesApi.starsWeekly();
+      syncGameResponse(res);
+      showT('Weekly 100K draw entry confirmed.', 'tstar');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Entry failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const EARN_WAYS = [
@@ -58,86 +94,58 @@ export default function Stars() {
     { action: 'Bonus Mode',             earn: 'Every play earns Stars only'          },
     { action: t(lang, 'dailyRewardStars'), earn: '20–100 ' + t(lang, 'starsPerDay') },
     { action: t(lang, 'threeDayStreak'), earn: '+50 bonus Stars'                     },
-    { action: t(lang, 'sevenDayStreak'), earn: '+150 bonus Stars'                    },
-    { action: t(lang, 'inviteFriend'),   earn: '200 ' + t(lang, 'starsPerReferral') },
   ];
 
   return (
     <div className="pg on" id="p-stars">
-      <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        {/* Balance card */}
-        <div className="card" style={{ marginBottom: 13, background: 'var(--star-light)', border: '1.5px solid var(--star)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ maxWidth: 620, margin: '0 auto' }}>
+        {/* Header */}
+        <div className="card" style={{ marginBottom: 13, background: 'var(--star-light)', border: '0.5px solid var(--star)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--star-dark)', marginBottom: 4 }}>{t(lang, 'starsBalanceHub')}</div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--star-dark)' }}>{state.starsBalance.toLocaleString()}</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--star-dark)', marginBottom: 3 }}>{t(lang, 'starsHub')}</div>
+              <div style={{ fontSize: 12, color: 'var(--star-dark)', opacity: .8 }}>{t(lang, 'starsHubSub')}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, color: 'var(--star-dark)', marginBottom: 4 }}>{t(lang, 'totalTicketsHeld')}</div>
-              <div style={{ fontSize: 24, fontWeight: 600, color: 'var(--star-dark)' }}>{state.tickets}</div>
-            </div>
-          </div>
-
-          {/* Crown Draw progress */}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--star-dark)', marginBottom: 5 }}>
-              <span>{t(lang, 'crownDrawProgressLabel')} ({CROWN_STAR_COST} {t(lang, 'stars')})</span>
-              <span>{crownPct}%</span>
-            </div>
-            <div style={{ height: 7, background: 'rgba(0,0,0,.1)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${crownPct}%`, background: 'var(--star)', borderRadius: 4, transition: 'width .5s' }} />
-            </div>
-            {crownPct < 100 && (
-              <div style={{ fontSize: 10, color: 'var(--star-dark)', marginTop: 3, opacity: .7 }}>
-                {CROWN_STAR_COST - state.starsBalance} more {t(lang, 'stars')} needed
-              </div>
-            )}
-          </div>
-
-          {/* Weekly draw progress */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--star-dark)', marginBottom: 5 }}>
-              <span>{t(lang, 'weeklyProgressLabel')} ({WEEKLY_STAR_COST} {t(lang, 'stars')})</span>
-              <span>{weeklyPct}%</span>
-            </div>
-            <div style={{ height: 7, background: 'rgba(0,0,0,.1)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${weeklyPct}%`, background: 'var(--amber)', borderRadius: 4, transition: 'width .5s' }} />
+              <div style={{ fontSize: 28, fontWeight: 600, color: 'var(--star-dark)' }}>{state.starsBalance.toLocaleString()} ★</div>
+              <div style={{ fontSize: 11, color: 'var(--star-dark)', opacity: .7 }}>{t(lang, 'starsBalance')}</div>
             </div>
           </div>
         </div>
 
         {toast && <div className={`toast ${toast.cls}`} style={{ marginBottom: 13 }}>{toast.msg}</div>}
 
-        {/* Crown Draw entry options */}
+        {/* Crown Draw */}
         <div className="card" style={{ marginBottom: 13 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{t(lang, 'crownDraw')} — June 15</div>
-          <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 13 }}>
-            500,000 ETB {t(lang, 'jackpot')}. {t(lang, 'starsEntry')} — you earned them.
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 10 }}>{t(lang, 'crownDraw')} — 500,000 ETB</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text2)', marginBottom: 4 }}>
+              <span>{t(lang, 'crownDrawProgressLabel')} ({CROWN_STAR_COST} {t(lang, 'stars')})</span>
+              <span style={{ fontWeight: 500, color: 'var(--star-dark)' }}>{state.starsBalance} / {CROWN_STAR_COST}</span>
+            </div>
+            <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${crownPct}%`, background: 'var(--star)', borderRadius: 3, transition: 'width .5s' }} />
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {/* Stars only */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ background: 'var(--bg)', borderRadius: 9, padding: '12px 14px', border: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{t(lang, 'starsOnlyLabel')}</div>
                 <div style={{ fontSize: 11, color: 'var(--text2)' }}>
                   {CROWN_STAR_COST} {t(lang, 'stars')} — {t(lang, 'noCashNeeded')}. Have: {state.starsBalance} {t(lang, 'stars')}.
                 </div>
-                <div style={{ marginTop: 5, height: 4, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${crownPct}%`, background: 'var(--star)', borderRadius: 3 }} />
-                </div>
               </div>
               <button
                 className={state.starsBalance >= CROWN_STAR_COST ? 'stbtn' : 'sbtn'}
                 style={{ marginLeft: 14, flexShrink: 0, fontSize: 11, padding: '7px 14px' }}
                 onClick={enterCrownStars}
-                disabled={state.starsBalance < CROWN_STAR_COST}
+                disabled={state.starsBalance < CROWN_STAR_COST || submitting}
               >
                 {state.starsBalance >= CROWN_STAR_COST ? 'Enter free' : `${CROWN_STAR_COST - state.starsBalance} short`}
               </button>
             </div>
 
-            {/* Cash only */}
             <div style={{ background: 'var(--bg)', borderRadius: 9, padding: '12px 14px', border: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{t(lang, 'cashEntryLabel')}</div>
@@ -146,20 +154,13 @@ export default function Stars() {
               <button
                 className={state.balance >= 500 ? 'abtn' : 'sbtn'}
                 style={{ marginLeft: 14, flexShrink: 0, fontSize: 11, padding: '7px 14px' }}
-                onClick={() => {
-                  if (state.balance < 500) { showT('Insufficient balance', 'tx'); return; }
-                  deductBalance(500);
-                  addTransaction('Crown Draw — Cash entry', -500, 'out');
-                  addTicket();
-                  addNotification('ti-trophy', 'ta', 'Crown Draw cash entry confirmed');
-                  showT(t(lang, 'entryConfirmed'), 'ts');
-                }}
+                onClick={enterCrownCash}
+                disabled={state.balance < 500 || submitting}
               >
                 500 ETB
               </button>
             </div>
 
-            {/* Hybrid */}
             <div style={{ background: 'var(--bg)', borderRadius: 9, padding: '12px 14px', border: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{t(lang, 'starsPlusCash')}</div>
@@ -171,7 +172,7 @@ export default function Stars() {
                 className={state.starsBalance >= CROWN_HYBRID_STAR && state.balance >= CROWN_HYBRID_CASH ? 'pbtn' : 'sbtn'}
                 style={{ marginLeft: 14, flexShrink: 0, fontSize: 11, padding: '7px 14px' }}
                 onClick={enterCrownHybrid}
-                disabled={state.starsBalance < CROWN_HYBRID_STAR || state.balance < CROWN_HYBRID_CASH}
+                disabled={state.starsBalance < CROWN_HYBRID_STAR || state.balance < CROWN_HYBRID_CASH || submitting}
               >
                 {t(lang, 'hybridEntry').split('+')[0].trim()}
               </button>
@@ -208,6 +209,7 @@ export default function Stars() {
               className={state.starsBalance >= WEEKLY_STAR_COST ? 'pbtn' : 'sbtn'}
               style={{ fontSize: 11, padding: '7px 14px', flexShrink: 0 }}
               onClick={() => state.starsBalance >= WEEKLY_STAR_COST ? enterWeekly() : goPage('weekly')}
+              disabled={submitting}
             >
               {state.starsBalance >= WEEKLY_STAR_COST ? t(lang, 'enterWeeklyNow') : `${WEEKLY_STAR_COST - state.starsBalance} ${t(lang, 'stars')} short`}
             </button>

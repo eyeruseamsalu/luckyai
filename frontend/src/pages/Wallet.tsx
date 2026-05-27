@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../translations';
+import { walletApi, ApiError } from '../lib/api';
 
 const METHODS = [
   { id: 'chapa',    label: 'Chapa',    icon: 'ti-credit-card-pay', color: '#E8F5F0', border: '#00BFA5' },
@@ -10,33 +11,48 @@ const METHODS = [
 ];
 
 export default function Wallet() {
-  const { state, lang, addBalance, addTransaction, addNotification } = useStore();
+  const { state, lang, syncGameResponse } = useStore();
   const [method, setMethod] = useState('telebirr');
   const [amount, setAmount] = useState('');
   const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
   const [tab, setTab] = useState<'deposit' | 'withdraw'>('deposit');
+  const [submitting, setSubmitting] = useState(false);
 
   const showT = (msg: string, cls: string) => { setToast({ msg, cls }); setTimeout(() => setToast(null), 3200); };
+  const methodLabel = METHODS.find(m => m.id === method)?.label ?? method;
 
-  const doDeposit = () => {
+  const doDeposit = async () => {
     const a = parseFloat(amount);
     if (!a || a < 10) { showT('Minimum deposit is 10 ETB', 'tx'); return; }
     if (a > 50000) { showT('Maximum single deposit is 50,000 ETB', 'tx'); return; }
-    addBalance(a);
-    addTransaction(`${METHODS.find(m => m.id === method)?.label} deposit`, a, 'in');
-    addNotification('ti-coin', 'tg', `${a.toLocaleString()} ETB deposited via ${METHODS.find(m => m.id === method)?.label}`);
-    showT(`${a.toLocaleString()} ETB added to your wallet`, 'ts');
-    setAmount('');
+    setSubmitting(true);
+    try {
+      const res = await walletApi.deposit({ amount: a, method: methodLabel });
+      syncGameResponse(res);
+      showT(`${a.toLocaleString()} ETB added to your wallet`, 'ts');
+      setAmount('');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Deposit failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const doWithdraw = () => {
+  const doWithdraw = async () => {
     const a = parseFloat(amount);
     if (!a || a < 50) { showT('Minimum withdrawal is 50 ETB', 'tx'); return; }
     if (a > state.balance) { showT('Insufficient balance', 'tx'); return; }
-    addBalance(-a);
-    addTransaction(`Withdrawal to ${METHODS.find(m => m.id === method)?.label}`, -a, 'out');
-    showT(`${a.toLocaleString()} ETB withdrawal initiated — arrives in 1–3 minutes`, 'ts');
-    setAmount('');
+    setSubmitting(true);
+    try {
+      const res = await walletApi.withdraw({ amount: a, method: methodLabel });
+      syncGameResponse(res);
+      showT(`${a.toLocaleString()} ETB withdrawal initiated — arrives in 1–3 minutes`, 'ts');
+      setAmount('');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Withdrawal failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -110,8 +126,8 @@ export default function Wallet() {
 
           {toast && <div className={`toast ${toast.cls}`} style={{ marginBottom: 10 }}>{toast.msg}</div>}
 
-          <button className="abtn" style={{ width: '100%', padding: 10 }} onClick={tab === 'deposit' ? doDeposit : doWithdraw}>
-            {tab === 'deposit' ? t(lang, 'depositBtn') : t(lang, 'withdrawBtn')}
+          <button className="abtn" style={{ width: '100%', padding: 10 }} onClick={tab === 'deposit' ? doDeposit : doWithdraw} disabled={submitting}>
+            {submitting ? 'Processing...' : tab === 'deposit' ? t(lang, 'depositBtn') : t(lang, 'withdrawBtn')}
           </button>
         </div>
 

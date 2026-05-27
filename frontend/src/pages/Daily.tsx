@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../translations';
+import { ApiError } from '../lib/api';
 
 const STREAK_MILESTONES = [
   { days: 3,  label: '3-day streak',  reward: '+20 ETB',       status: 'reached',  tag: 'tg' },
@@ -17,6 +19,22 @@ const DAILY_SCHEDULE = [
 
 export default function Daily() {
   const { state, lang, claimDaily, goPage } = useStore();
+  const [claiming, setClaiming] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const handleClaim = async () => {
+    setClaiming(true);
+    try {
+      await claimDaily();
+      setToast('Daily reward claimed!');
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setToast(err instanceof ApiError ? err.message : 'Claim failed');
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setClaiming(false);
+    }
+  };
 
   const WEEK_DAYS = [
     { key: 'Mon', labelKey: 'mon', reward: '50 pts', sub: 'Activity points', done: true,  icon: 'ti-star'            },
@@ -85,11 +103,12 @@ export default function Daily() {
             {state.dailyClaimed ? (
               <span className="tag tg" style={{ fontSize: 11 }}>Claimed</span>
             ) : (
-              <button className="abtn" style={{ padding: '8px 18px', flexShrink: 0 }} onClick={claimDaily}>
-                {t(lang, 'claimNow')}
+              <button className="abtn" style={{ padding: '8px 18px', flexShrink: 0 }} onClick={handleClaim} disabled={claiming}>
+                {claiming ? 'Claiming...' : t(lang, 'claimNow')}
               </button>
             )}
           </div>
+          {toast && <div className="toast ts" style={{ marginTop: 10, fontSize: 12 }}>{toast}</div>}
         </div>
 
         {/* Bottom two columns */}

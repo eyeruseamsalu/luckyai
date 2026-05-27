@@ -22,7 +22,7 @@ export default function Sidebar() {
     <>
       <div className={`overlay${sidebarOpen ? ' on' : ''}`} onClick={closeSidebar} />
       <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
-        <div className="s-lbl" style={{ marginTop: 2 }}>Main</div>
+        <div className="s-lbl" style={{ marginTop: 2 }}>{t(lang, 'navMain')}</div>
         {nb('home',    'ti-home',            t(lang, 'home'))}
         {nb('spin',    'ti-rotate-clockwise', t(lang, 'tryChance'))}
         {nb('draw',    'ti-trophy',           t(lang, 'crownDraw'))}
@@ -34,7 +34,7 @@ export default function Sidebar() {
         {nb('wallet',  'ti-wallet',           t(lang, 'wallet'))}
         {nb('tickets', 'ti-ticket',           t(lang, 'myTickets'))}
         <div className="s-div" />
-        <div className="s-lbl">Games</div>
+        <div className="s-lbl">{t(lang, 'navGames')}</div>
         {nb('scratch', 'ti-cards',          t(lang, 'scratchWin'))}
         {nb('quick',   'ti-bolt',           t(lang, 'quickPlay'))}
         {nb('daily',   'ti-calendar-check', t(lang, 'dailyReward'),
@@ -43,7 +43,7 @@ export default function Sidebar() {
           </span>
         )}
         <div className="s-div" />
-        <div className="s-lbl">Economy</div>
+        <div className="s-lbl">{t(lang, 'navEconomy')}</div>
         {nb('stars', 'ti-star', t(lang, 'starsHub'),
           <span className="nb-pip" style={{ background: 'var(--star-light)', color: 'var(--star-dark)' }}>
             {state.starsBalance}
@@ -61,13 +61,6 @@ export default function Sidebar() {
           )
         )}
         <div className="s-div" />
-        {state.isLoggedIn && state.userRole === 'admin' && (
-          <button className={`nb${page === 'admin' ? ' on' : ''}`}
-            style={{ color: 'var(--purple-dark)' }}
-            onClick={() => goPage('admin')}>
-            <i className="ti ti-settings" />Admin panel
-          </button>
-        )}
         <button className="nb" onClick={authAction}>
           <i className={`ti ${state.isLoggedIn ? 'ti-logout' : 'ti-login'}`} />
           {state.isLoggedIn ? t(lang, 'signOut') : t(lang, 'signIn')}

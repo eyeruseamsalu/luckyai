@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../translations';
+import { gamesApi, ApiError } from '../lib/api';
 
 const PICK_COUNT = 6;
 const ENTRY_STARS = 800;
@@ -27,10 +28,11 @@ function countdown() {
 }
 
 export default function Weekly() {
-  const { state, lang, spendStars, addTransaction, addNotification, addTicket, addWeeklyEntry } = useStore();
+  const { state, lang, syncGameResponse } = useStore();
   const [picks, setPicks] = useState<number[]>([]);
   const [toast, setToast] = useState('');
   const [toastCls, setToastCls] = useState('ts');
+  const [submitting, setSubmitting] = useState(false);
 
   const showT = (msg: string, cls = 'ts') => {
     setToast(msg); setToastCls(cls);
@@ -51,19 +53,22 @@ export default function Weekly() {
     setPicks([...s].sort((a, b) => a - b));
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (picks.length < PICK_COUNT) { showT(`Pick all ${PICK_COUNT} numbers first`, 'tx'); return; }
     if (state.starsBalance < ENTRY_STARS) {
       showT(`Need ${ENTRY_STARS} Stars — earn more by playing`, 'tx'); return;
     }
-    const ok = spendStars(ENTRY_STARS);
-    if (!ok) { showT('Could not deduct Stars', 'tx'); return; }
-    addWeeklyEntry(picks.slice().sort((a, b) => a - b));
-    addTransaction(`Weekly draw entry — ${picks.slice().sort((a,b)=>a-b).map(n => String(n).padStart(2,'0')).join(', ')}`, -ENTRY_STARS, 'star');
-    addNotification('ti-calendar-stats', 'tp', `Weekly draw entry confirmed: ${picks.slice().sort((a,b)=>a-b).map(n => String(n).padStart(2,'0')).join(', ')}`);
-    addTicket();
-    setPicks([]);
-    showT(t(lang, 'entryConfirmed'), 'ts');
+    setSubmitting(true);
+    try {
+      const res = await gamesApi.weeklyEnter({ numbers: picks.slice().sort((a, b) => a - b) });
+      syncGameResponse(res);
+      setPicks([]);
+      showT(t(lang, 'entryConfirmed'), 'ts');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Entry failed', 'tx');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const dr = state.weeklyDrawResult;
@@ -215,9 +220,9 @@ export default function Weekly() {
               className="abtn"
               style={{ width: '100%', padding: 11, marginTop: 10, background: 'var(--purple)', opacity: picks.length < PICK_COUNT || state.starsBalance < ENTRY_STARS ? .45 : 1 }}
               onClick={confirm}
-              disabled={picks.length < PICK_COUNT || state.starsBalance < ENTRY_STARS}
+              disabled={picks.length < PICK_COUNT || state.starsBalance < ENTRY_STARS || submitting}
             >
-              {t(lang, 'confirmEntry')} — {ENTRY_STARS} {t(lang, 'stars')}
+              {submitting ? 'Confirming...' : `${t(lang, 'confirmEntry')} — ${ENTRY_STARS} ${t(lang, 'stars')}`}
             </button>
           </div>
 

@@ -1,7 +1,7 @@
 export type Page =
   | 'home' | 'auth' | 'spin' | 'scratch' | 'quick' | 'daily'
   | 'draw' | 'wallet' | 'tickets' | 'account' | 'notifications'
-  | 'admin' | 'stars' | 'weekly';
+  | 'stars' | 'weekly';
 
 export type Lang = 'en' | 'am' | 'om' | 'af' | 'ti';
 

@@ -2,6 +2,14 @@ import { useStore } from '../store';
 
 export default function Notifications() {
   const { state, markAllRead } = useStore();
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+    } catch {
+      // ignore
+    }
+  };
   const unread = state.notifications.filter(n => !n.read).length;
 
   const iconColor: Record<string, string> = {
@@ -29,7 +37,7 @@ export default function Notifications() {
               </div>
             </div>
             {unread > 0 && (
-              <button className="sbtn" style={{ fontSize: 11 }} onClick={markAllRead}>Mark all read</button>
+              <button className="sbtn" style={{ fontSize: 11 }} onClick={handleMarkAllRead}>Mark all read</button>
             )}
           </div>
 

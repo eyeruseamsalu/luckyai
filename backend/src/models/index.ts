@@ -1,3 +1,13 @@
 export { User } from "./User.js";
 export { Transaction } from "./Transaction.js";
 export { Notification } from "./Notification.js";
+export { WeeklyEntry } from "./WeeklyEntry.js";
+export { DrawEntry } from "./DrawEntry.js";
+export { AppConfig, getAppConfig } from "./AppConfig.js";
+export { Draw, getActiveCrownDraw } from "./Draw.js";
+export { LotteryTicket } from "./LotteryTicket.js";
+export { Winner } from "./Winner.js";
+export { RevenueLedger } from "./RevenueLedger.js";
+export { StarLedger } from "./StarLedger.js";
+export { GameHistory } from "./GameHistory.js";
+export { AdminLog } from "./AdminLog.js";

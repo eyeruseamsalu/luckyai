@@ -8,7 +8,7 @@ import apiRoutes from "./routes/index.js";
 const app = express();
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "32kb" }));
 
 app.use("/api", apiRoutes);
 

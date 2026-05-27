@@ -1,13 +1,14 @@
 # LuckyAI
 
-MERN monorepo: React (Vite) frontend + Express/MongoDB backend.
+MERN monorepo: React (Vite) player app + separate admin app + Express/MongoDB backend.
 
 ## Structure
 
 ```
 luckyai/
-├── frontend/     # React UI (Vite) — unchanged look & mock store
-├── backend/      # Express API — MVC (models, controllers, routes)
+├── frontend/     # Player app (port 5173)
+├── admin/        # Admin panel (port 5174)
+├── backend/      # Express API
 └── package.json  # npm workspaces
 ```
 
@@ -15,41 +16,51 @@ luckyai/
 
 ```bash
 npm install
-```
-
-Copy environment files:
-
-```bash
 cp .env.example backend/.env
 ```
 
+Ensure MongoDB is running (`mongodb://127.0.0.1:27017/luckyai`).
+
 ## Development
 
-Run both apps:
-
 ```bash
+# Player + API
 npm run dev
+
+# Player + API + Admin
+npm run dev:all
 ```
 
-Frontend only (same UI as before):
+| App | URL |
+|-----|-----|
+| Player | http://localhost:5173 |
+| Admin | http://localhost:5174 |
+| API | http://localhost:5001/api/health |
+
+## Seed admin
 
 ```bash
-npm run dev:web
+curl -X POST http://localhost:5001/api/admin/seed-admin -H "Content-Type: application/json" -d "{\"email\":\"admin@luckyai.com\",\"password\":\"admin12345\"}"
 ```
 
-Backend only:
+Sign in at **http://localhost:5174** with those credentials.
 
-```bash
-npm run dev:api
-```
+## Key APIs
 
-- Frontend: http://localhost:5173
-- API health: http://localhost:5001/api/health (port 5000 reserved for other apps, e.g. University Student Hub)
+| Route | Description |
+|-------|-------------|
+| `GET /api/platform/state` | Public platform state (countdown, community stars, jackpots) |
+| `POST /api/auth/register` | Create account |
+| `POST /api/auth/login` | Sign in |
+| `GET /api/wallet` | Balance + transactions |
+| `POST /api/games/spin` | Spin (server-side odds) |
+| `GET /api/admin/overview` | Admin stats + revenue pools |
+| `POST /api/admin/crown-draw` | Run crown draw + pay winners |
 
-The frontend still uses local mock state in `frontend/src/store.tsx`. API routes are scaffolded for future wiring.
+## Crown activation
 
-## Production build
+Community Stars accumulate on the backend when users earn Stars. When `communityStars >= starTarget`, the API automatically schedules the Crown draw countdown. The homepage polls `GET /api/platform/state` every second and displays server-computed countdown text only.
 
-```bash
-npm run build
-```
+## Revenue split
+
+Paid plays distribute gross revenue: Crown 35%, Weekly 25%, Platform 25%, Reserve 15%.

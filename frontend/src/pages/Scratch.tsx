@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../translations';
 import BonusMode from '../components/BonusMode';
+import { gamesApi } from '../lib/api';
 
 const CARD_NAMES = [
   'Timkat', 'Meskel', 'Fasika', 'Enkutatash', 'Genna',
@@ -20,24 +21,7 @@ interface Prize {
   weight: number;
 }
 
-const PRIZES: Prize[] = [
-  { tier: 'high',  headline: 'You won 200 ETB',               sub: 'Triple match. Added to your balance.',                  cash: 200, stars: 100, weight: 2  },
-  { tier: 'high',  headline: 'You won 80 ETB',                sub: 'Strong match. Credited instantly.',                     cash: 80,  stars: 60,  weight: 5  },
-  { tier: 'mid',   headline: 'You won 30 ETB + 50 Stars',     sub: 'Good card. Both rewards credited.',                     cash: 30,  stars: 50,  weight: 10 },
-  { tier: 'mid',   headline: 'You won 10 ETB + 30 Stars',     sub: 'Partial match. Rewards added.',                         cash: 10,  stars: 30,  weight: 16 },
-  { tier: 'asset', headline: 'You unlocked 2x Stars Boost',   sub: 'Your next 5 plays earn double Stars. Plus 25 Stars.',   stars: 25, boostLabel: '2x Stars next 5 plays', weight: 22 },
-  { tier: 'asset', headline: 'You unlocked Loss Protection',  sub: 'Your stake is refunded on next 3 losses. Plus 20 Stars.', stars: 20, boostLabel: 'Loss protection x3', weight: 22 },
-  { tier: 'asset', headline: 'You unlocked a Bonus Entry',    sub: 'One Crown Draw bonus entry added. Plus 35 Stars.',      stars: 35, boostLabel: 'Crown Draw entry', weight: 23 },
-];
-
 const COST_OPTIONS = [5, 10, 25, 50];
-
-function pickPrize(): Prize {
-  const total = PRIZES.reduce((a, p) => a + p.weight, 0);
-  let r = Math.random() * total;
-  for (const p of PRIZES) { r -= p.weight; if (r <= 0) return p; }
-  return PRIZES[PRIZES.length - 1];
-}
 
 function nameForIndex(setKey: number, idx: number) {
   return CARD_NAMES[(setKey * 9 + idx) % CARD_NAMES.length];
@@ -48,32 +32,32 @@ interface CardProps { index: number; setKey: number; cost: number; onReveal: (p:
 function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
   const store = useStore();
   const [revealed, setRevealed] = useState(false);
-  const [prize] = useState<Prize>(pickPrize);
+  const [prize, setPrize] = useState<Prize | null>(null);
+  const [revealing, setRevealing] = useState(false);
   const name = nameForIndex(setKey, index);
   const lang = store.lang;
 
-  const tierColor = { high: 'var(--amber-dark)', mid: 'var(--green-dark)', asset: 'var(--purple-dark)' }[prize.tier];
-  const tierBg    = { high: 'var(--amber-light)', mid: 'var(--green-light)', asset: 'var(--purple-light)' }[prize.tier];
-  const tierBorder = { high: 'var(--amber)', mid: 'var(--green)', asset: 'var(--purple)' }[prize.tier];
-
-  const reveal = () => {
-    if (revealed) return;
+  const reveal = async () => {
+    if (revealed || revealing) return;
+    if (!store.state.isLoggedIn) return;
     if (store.state.balance < cost) return;
-    if (!store.deductBalance(cost)) return;
-    store.addTransaction(`Scratch card — ${name} (${cost} ETB)`, -cost, 'out');
-    if (prize.cash && !store.state.cashCapHit) {
-      store.addBalance(prize.cash);
-      store.addTransaction(`Scratch Win — ${name}`, prize.cash, 'in');
+    setRevealing(true);
+    try {
+      const res = await gamesApi.scratch({ cost });
+      store.syncGameResponse(res);
+      const p = res.result.prize as Prize;
+      setPrize(p);
+      setRevealed(true);
+      onReveal(p);
+    } catch {
+      // insufficient balance or error — stay unrevealed
+    } finally {
+      setRevealing(false);
     }
-    store.addStars(prize.stars);
-    store.addTransaction(`Scratch Win Stars — ${name}`, prize.stars, 'star');
-    store.recordPlay();
-    setRevealed(true);
-    onReveal(prize);
   };
 
-  if (!revealed) {
-    const canAfford = store.state.balance >= cost;
+  if (!prize) {
+    const canAfford = store.state.isLoggedIn && store.state.balance >= cost;
     return (
       <div
         onClick={reveal}
@@ -81,7 +65,7 @@ function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
           borderRadius: 16,
           background: canAfford ? '#EEEDFE' : 'var(--bg)',
           border: `1.5px solid ${canAfford ? '#C4BEFA' : 'var(--border2)'}`,
-          cursor: canAfford ? 'pointer' : 'not-allowed',
+          cursor: canAfford && !revealing ? 'pointer' : 'not-allowed',
           padding: '18px 14px',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           minHeight: 148,
@@ -102,9 +86,9 @@ function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
         <div style={{ fontSize: 10, color: '#8F87CC', fontWeight: 500, marginBottom: 10, alignSelf: 'flex-start' }}>
           {name}
         </div>
-        <div style={{ fontSize: 40, color: '#7B68EE', fontWeight: 700, lineHeight: 1, marginBottom: 10 }}>?</div>
+        <div style={{ fontSize: 40, color: '#7B68EE', fontWeight: 700, lineHeight: 1, marginBottom: 10 }}>{revealing ? '…' : '?'}</div>
         <div style={{ fontSize: 11, color: canAfford ? '#8F87CC' : 'var(--text3)', textAlign: 'center' }}>
-          {canAfford ? t(lang, 'clickReveal') : 'Insufficient balance'}
+          {revealing ? 'Revealing...' : canAfford ? t(lang, 'clickReveal') : store.state.isLoggedIn ? 'Insufficient balance' : 'Sign in to play'}
         </div>
         {canAfford && (
           <div style={{ marginTop: 8, fontSize: 10, color: '#AAA4DD', background: 'rgba(255,255,255,.5)', borderRadius: 5, padding: '2px 8px' }}>
@@ -114,6 +98,10 @@ function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
       </div>
     );
   }
+
+  const tierColor = { high: 'var(--amber-dark)', mid: 'var(--green-dark)', asset: 'var(--purple-dark)' }[prize.tier];
+  const tierBg    = { high: 'var(--amber-light)', mid: 'var(--green-light)', asset: 'var(--purple-light)' }[prize.tier];
+  const tierBorder = { high: 'var(--amber)', mid: 'var(--green)', asset: 'var(--purple)' }[prize.tier];
 
   return (
     <div

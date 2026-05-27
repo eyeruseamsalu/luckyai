@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useStore } from '../store';
 import BonusMode from '../components/BonusMode';
+import { gamesApi, ApiError } from '../lib/api';
 
 const SEGMENTS = [
   { label: 'Try again',    color: '#F0F0EB', text: '#6B6B64',  val: 0,    type: 'lose',    prob: 22 },
@@ -17,22 +18,11 @@ const SEGMENTS = [
   { label: '100 ETB',      color: '#EAF3DE', text: '#27500A',  val: 100,  type: 'cash',    prob: 0.5 },
 ];
 
-const TOTAL_PROB = SEGMENTS.reduce((a, s) => a + s.prob, 0);
 const COST_OPTIONS = [5, 15, 30, 50];
 const STAR_EARN_ON_LOSS = 30;
 
-function pickSegment() {
-  let r = Math.random() * TOTAL_PROB;
-  for (const s of SEGMENTS) { r -= s.prob; if (r <= 0) return s; }
-  return SEGMENTS[0];
-}
-
 export default function Spin() {
-  const {
-    state, deductBalance, addBalance, addStars,
-    addTransaction, addNotification, addTicket, setPremium,
-    recordPlay, goPage,
-  } = useStore();
+  const { state, syncGameResponse, goPage } = useStore();
 
   const [spinning, setSpinning] = useState(false);
   const [angle, setAngle] = useState(0);
@@ -78,17 +68,30 @@ export default function Spin() {
     }
   }, [drawWheel]);
 
-  const spin = () => {
+  const spin = async () => {
     if (spinning) return;
+    if (!state.isLoggedIn) { showT('Sign in to play', 'tx'); return; }
     if (state.balance < cost) { showT('Insufficient balance. Top up to continue.', 'tx'); return; }
-    if (!deductBalance(cost)) return;
-    addTransaction(`Spin (${cost} ETB)`, -cost, 'out');
-    recordPlay();
+
     setSpinning(true);
     setResult(null);
 
-    const seg = pickSegment();
-    const segIdx = SEGMENTS.indexOf(seg);
+    let segIdx = 0;
+    let seg = SEGMENTS[0];
+    let message = '';
+
+    try {
+      const res = await gamesApi.spin({ cost });
+      segIdx = (res.result.segmentIndex as number) ?? 0;
+      seg = SEGMENTS[segIdx] ?? SEGMENTS[0];
+      message = (res.result.message as string) ?? seg.label;
+      syncGameResponse(res);
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Spin failed', 'tx');
+      setSpinning(false);
+      return;
+    }
+
     const step = 360 / SEGMENTS.length;
     const targetDeg = 360 * 7 + (360 - segIdx * step) - step / 2;
     const startAngle = angleRef.current;
@@ -110,40 +113,10 @@ export default function Spin() {
         setSpinning(false);
         setResult(seg);
         setTotalSpins(n => n + 1);
-
-        const mult = state.activeBoosts.find(b => b.type === 'multiplier') ? 1.2 : 1;
-
-        if ((seg.type === 'cash') && !state.cashCapHit) {
-          const won = Math.round(seg.val * mult * (streakBonus ? 1.1 : 1));
-          addBalance(won);
-          addTransaction(`Spin win — ${won} ETB`, won, 'in');
-          addNotification('ti-coin', 'tg', `You won ${won} ETB from the spin`);
-          showT(`${won} ETB added to your balance`, 'ts');
-          setStreak(s => s + 1);
-          if (streak + 1 >= 3) { setStreakBonus(true); }
-        } else if (seg.type === 'stars' || state.cashCapHit) {
-          const stars = seg.type === 'stars' ? seg.val : STAR_EARN_ON_LOSS;
-          addStars(stars);
-          addTransaction(`Spin — Stars earned`, stars, 'star');
-          showT(`${stars} Stars earned`, 'tstar');
-          setStreak(0); setStreakBonus(false);
-        } else if (seg.type === 'ticket') {
-          addTicket();
-          addNotification('ti-ticket', 'tg', 'Free Crown Draw ticket from spin');
-          showT('Free Crown Draw ticket added', 'ts');
-          setStreak(s => s + 1);
-        } else if (seg.type === 'premium') {
-          setPremium();
-          addNotification('ti-star', 'ta', 'Premium day unlocked from spin');
-          showT('Premium access for 24 hours', 'ts');
-          setStreak(s => s + 1);
-        } else {
-          const stars = Math.round(STAR_EARN_ON_LOSS * mult);
-          addStars(stars);
-          addTransaction('Spin — Stars', stars, 'star');
-          showT(`${stars} Stars earned`, 'tstar');
-          setStreak(0); setStreakBonus(false);
-        }
+        if (message) showT(message, seg.type === 'lose' ? 'tn-t' : 'ts');
+        if (seg.type === 'cash' && !state.cashCapHit) setStreak(s => s + 1);
+        else if (seg.type === 'ticket' || seg.type === 'premium') setStreak(s => s + 1);
+        else setStreak(0);
       }
     };
     animate();
@@ -152,8 +125,8 @@ export default function Spin() {
   return (
     <div className="pg on" id="p-spin">
       <BonusMode />
-      <div style={{ maxWidth: 580, margin: '0 auto' }}>
-        {/* Streak bar */}
+      <div className="spin-layout">
+        <div>
         {streak > 0 && (
           <div style={{ background: 'var(--amber-light)', border: '0.5px solid var(--amber)', borderRadius: 9, padding: '8px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
             <span style={{ color: 'var(--amber-dark)', fontWeight: 500 }}>Win streak: {streak}</span>
@@ -162,7 +135,7 @@ export default function Spin() {
           </div>
         )}
 
-        <div className="card" style={{ marginBottom: 13 }}>
+        <div className="card spin-wheel-col" style={{ marginBottom: 13 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2 }}>Try your chance</div>
@@ -230,8 +203,9 @@ export default function Spin() {
               : `Cash plays today: ${state.playsToday}/8`}
           </div>
         </div>
+        </div>
 
-        {/* Prize grid */}
+        <div>
         <div className="card" style={{ marginBottom: 13 }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Prize table</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
@@ -254,6 +228,7 @@ export default function Spin() {
             <div style={{ fontSize: 11, color: 'var(--star-dark)', opacity: .7 }}>1,500 Stars = 1 Crown Draw entry</div>
           </div>
           <button className="stbtn" onClick={() => goPage('stars')}>Stars Hub</button>
+        </div>
         </div>
       </div>
     </div>

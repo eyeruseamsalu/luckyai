@@ -4,12 +4,15 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "admin"
   ],
   "scripts": {
     "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev -w @workspace/luckyai-frontend\" \"npm run dev -w @workspace/luckyai-backend\"",
+    "dev:all": "concurrently -n web,api,adm -c cyan,magenta,yellow \"npm run dev -w @workspace/luckyai-frontend\" \"npm run dev -w @workspace/luckyai-backend\" \"npm run dev -w @workspace/luckyai-admin\"",
     "dev:web": "npm run dev -w @workspace/luckyai-frontend",
     "dev:api": "npm run dev -w @workspace/luckyai-backend",
+    "dev:admin": "npm run dev -w @workspace/luckyai-admin",
     "build": "npm run build -w @workspace/luckyai-frontend",
     "build:web": "npm run build -w @workspace/luckyai-frontend",
     "start:api": "npm run start -w @workspace/luckyai-backend",

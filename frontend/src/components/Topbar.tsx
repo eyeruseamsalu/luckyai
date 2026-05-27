@@ -1,4 +1,5 @@
 import { useStore } from '../store';
+import { t } from '../translations';
 import type { Lang } from '../types';
 
 const LANGS: { code: Lang; label: string }[] = [
@@ -9,12 +10,12 @@ const LANGS: { code: Lang; label: string }[] = [
   { code: 'ti', label: 'ትግ' },
 ];
 
-const PAGE_TITLES: Record<string, string> = {
-  home: 'Home', auth: 'Sign in', spin: 'Try your chance',
-  scratch: 'Scratch & Win', quick: 'Quick Play', daily: 'Daily Reward',
-  draw: 'Crown Draw', wallet: 'Wallet', tickets: 'My Tickets',
-  account: 'Account', notifications: 'Notifications', admin: 'Admin Panel',
-  stars: 'Stars Hub', weekly: 'Weekly Draw',
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  home: 'pageHome', auth: 'pageAuth', spin: 'pageSpin',
+  scratch: 'pageScratch', quick: 'pageQuick', daily: 'pageDaily',
+  draw: 'pageDraw', wallet: 'pageWallet', tickets: 'pageTickets',
+  account: 'pageAccount', notifications: 'pageNotifications',
+  stars: 'pageStars', weekly: 'pageWeekly',
 };
 
 export default function Topbar() {
@@ -33,7 +34,7 @@ export default function Topbar() {
           <div className="tb-sub">Rewards Platform</div>
         </div>
       </div>
-      <div className="tb-title">{PAGE_TITLES[page] || ''}</div>
+      <div className="tb-title">{PAGE_TITLE_KEYS[page] ? t(lang, PAGE_TITLE_KEYS[page]) : ''}</div>
       <div className="tb-right">
         <span className="pill p-green" style={{ fontSize: 10 }}>
           <i className="ti ti-circle-check" style={{ fontSize: 10 }} /> System live

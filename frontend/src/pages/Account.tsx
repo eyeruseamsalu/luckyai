@@ -1,30 +1,47 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import { authApi, ApiError } from '../lib/api';
 
 export default function Account() {
-  const { state, logout, updateUserData, goPage } = useStore();
+  const { state, logout, goPage, syncFromServer } = useStore();
   const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
+  const [saving, setSaving] = useState(false);
   const showT = (msg: string, cls: string) => { setToast({ msg, cls }); setTimeout(() => setToast(null), 3000); };
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
     const name = (document.getElementById('ac-name') as HTMLInputElement)?.value?.trim();
     const email = (document.getElementById('ac-email') as HTMLInputElement)?.value?.trim();
     const phone = (document.getElementById('ac-phone') as HTMLInputElement)?.value?.trim();
     if (!name) { showT('Name cannot be empty', 'tx'); return; }
     if (!email?.includes('@')) { showT('Invalid email', 'tx'); return; }
-    const initials = name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    updateUserData({ name, email, phone, initials });
-    showT('Profile updated successfully', 'ts');
+    setSaving(true);
+    try {
+      const res = await authApi.updateProfile({ name, email, phone });
+      syncFromServer(res.user);
+      showT('Profile updated successfully', 'ts');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Update failed', 'tx');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const savePw = () => {
+  const savePw = async () => {
     const cur = (document.getElementById('ac-cur-pw') as HTMLInputElement)?.value;
     const nw = (document.getElementById('ac-new-pw') as HTMLInputElement)?.value;
     const cf = (document.getElementById('ac-cf-pw') as HTMLInputElement)?.value;
     if (!cur) { showT('Enter current password', 'tx'); return; }
     if (nw.length < 8) { showT('New password must be at least 8 characters', 'tx'); return; }
     if (nw !== cf) { showT('Passwords do not match', 'tx'); return; }
-    showT('Password changed successfully', 'ts');
+    setSaving(true);
+    try {
+      await authApi.changePassword({ currentPassword: cur, newPassword: nw });
+      showT('Password changed successfully', 'ts');
+    } catch (err) {
+      showT(err instanceof ApiError ? err.message : 'Password change failed', 'tx');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!state.isLoggedIn && !state.isGuest) {
@@ -112,7 +129,7 @@ export default function Account() {
             <input type="email" id="ac-email" defaultValue={state.userData.email} />
           </div>
           {toast && <div className={`toast ${toast.cls}`} style={{ marginBottom: 10 }}>{toast.msg}</div>}
-          <button className="abtn" onClick={saveProfile}>Save changes</button>
+          <button className="abtn" onClick={saveProfile} disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
         </div>
 
         {/* Change password */}

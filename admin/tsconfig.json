@@ -1,0 +1,13 @@
+{
+  "include": ["src/**/*"],
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    "target": "ES2020",
+    "lib": ["esnext", "dom"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["vite/client"],
+    "paths": { "@/*": ["./src/*"] }
+  }
+}

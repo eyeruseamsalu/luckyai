@@ -12,12 +12,20 @@ import Wallet from './pages/Wallet';
 import Tickets from './pages/Tickets';
 import Account from './pages/Account';
 import Notifications from './pages/Notifications';
-import Admin from './pages/Admin';
+import GuestBanner from './components/GuestBanner';
 import Stars from './pages/Stars';
 import Weekly from './pages/Weekly';
 
 function AppShell() {
-  const { page } = useStore();
+  const { page, loading } = useStore();
+
+  if (loading) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ fontSize: 14, color: 'var(--text2)' }}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -25,6 +33,7 @@ function AppShell() {
       <div className="body">
         <Sidebar />
         <main className="content">
+          <GuestBanner />
           {page === 'home'          && <Home />}
           {page === 'auth'          && <Auth />}
           {page === 'spin'          && <Spin />}
@@ -36,7 +45,6 @@ function AppShell() {
           {page === 'tickets'       && <Tickets />}
           {page === 'account'       && <Account />}
           {page === 'notifications' && <Notifications />}
-          {page === 'admin'         && <Admin />}
           {page === 'stars'         && <Stars />}
           {page === 'weekly'        && <Weekly />}
         </main>
