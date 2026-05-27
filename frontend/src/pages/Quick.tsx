@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { toast as sonnerToast } from "sonner";
+import { playGame, getGameHistory } from "@/lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
 
@@ -38,9 +40,7 @@ export default function Quick() {
 		deductBalance,
 		addBalance,
 		addStars,
-		addTransaction,
 		addNotification,
-		recordPlay,
 	} = useStore();
 	const [picks, setPicks] = useState<number[]>([]);
 	const [costIdx, setCostIdx] = useState(0);
@@ -65,6 +65,22 @@ export default function Quick() {
 		return () => clearInterval(id);
 	}, [closeTime]);
 
+	useEffect(() => {
+		getGameHistory("quick")
+			.then((res) => {
+				if (res?.rounds) {
+					setRecentRounds(
+						res.rounds.map((r: { drawn: number[]; matches: number; result: string }) => ({
+							draw: r.drawn,
+							matches: r.matches,
+							result: r.result,
+						})),
+					);
+				}
+			})
+			.catch(() => {});
+	}, []);
+
 	const cost = COSTS[costIdx].value;
 
 	const toggle = (n: number) => {
@@ -86,7 +102,7 @@ export default function Quick() {
 		setDrawn([]);
 	};
 
-	const play = () => {
+	const play = async () => {
 		if (picks.length < PICK_COUNT) {
 			setToast(`Pick ${PICK_COUNT} numbers`);
 			setTimeout(() => setToast(null), 2000);
@@ -98,80 +114,73 @@ export default function Quick() {
 			return;
 		}
 		if (!deductBalance(cost)) return;
-		addTransaction(`Quick play (${cost} ETB)`, -cost, "out");
-		recordPlay();
 		setPlaying(true);
 		setResult(null);
 
-		const drawnNums: number[] = [];
-		while (drawnNums.length < PICK_COUNT) {
-			const n = Math.floor(Math.random() * 20) + 1;
-			if (!drawnNums.includes(n)) drawnNums.push(n);
-		}
+		try {
+			const res = await playGame("quick", { picks, cost });
+			const drawnNums: number[] = res.drawn;
+			const matches = res.matches;
+			const wonCash = res.wonCash;
+			const wonStars = res.wonStars;
 
-		let i = 0;
-		const interval = setInterval(() => {
-			if (i >= drawnNums.length) {
-				clearInterval(interval);
-				const matches = picks.filter((p) => drawnNums.includes(p)).length;
-				const mult = state.activeBoosts.find((b) => b.type === "multiplier")
-					? 1.2
-					: 1;
+			let i = 0;
+			const interval = setInterval(() => {
+				if (i >= drawnNums.length) {
+					clearInterval(interval);
 
-				let label = "";
-				let cls = "";
-				let earned = "";
-				let wonCash = 0;
+					let label = "";
+					let cls = "";
+					let earned = "";
 
-				if (matches === 3) {
-					wonCash = Math.round(cost * 20 * mult);
-					label = `3 of 3 matched — ${wonCash} ETB won!`;
-					cls = "ts";
-					earned = `+${wonCash} ETB`;
-					addBalance(wonCash);
-					addTransaction("Quick play 3-match", wonCash, "in");
-					addNotification(
-						"ti-bolt",
-						"tg",
-						`Quick play: 3 matches — ${wonCash} ETB!`,
-					);
-				} else if (matches === 2) {
-					wonCash = Math.round(cost * 3 * mult);
-					label = `2 of 3 matched — ${wonCash} ETB won!`;
-					cls = "ts";
-					earned = `+${wonCash} ETB`;
-					addBalance(wonCash);
-					addTransaction("Quick play 2-match", wonCash, "in");
-				} else if (matches === 1) {
-					label = "1 matched — 8 Stars earned";
-					cls = "tn-t";
-					earned = "+8 Stars";
-					addStars(8);
-					addTransaction("Quick play 1-match Stars", 8, "star");
-				} else {
-					label = "No match — 2 Stars earned";
-					cls = "tn-t";
-					earned = "+2 Stars";
-					addStars(2);
-					addTransaction("Quick play Stars", 2, "star");
+					if (matches === 3) {
+						label = `3 of 3 matched — ${wonCash} ETB won!`;
+						cls = "ts";
+						earned = `+${wonCash} ETB`;
+						addBalance(wonCash);
+						addNotification(
+							"ti-bolt",
+							"tg",
+							`Quick play: 3 matches — ${wonCash} ETB!`,
+						);
+					} else if (matches === 2) {
+						label = `2 of 3 matched — ${wonCash} ETB won!`;
+						cls = "ts";
+						earned = `+${wonCash} ETB`;
+						addBalance(wonCash);
+					} else if (matches === 1) {
+						label = "1 matched — 8 Stars earned";
+						cls = "tn-t";
+						earned = "+8 Stars";
+						addStars(8);
+					} else {
+						label = "No match — 2 Stars earned";
+						cls = "tn-t";
+						earned = "+2 Stars";
+						addStars(2);
+					}
+
+					setResult({ matches, label, cls, earned });
+					setDrawn(drawnNums);
+					setRecentRounds((prev) => [
+						{
+							draw: drawnNums,
+							matches,
+							result: wonCash > 0 ? "Won" : wonStars > 0 ? "Free" : "Loss",
+						},
+						...prev.slice(0, 4),
+					]);
+					setPlaying(false);
+					return;
 				}
-
-				setResult({ matches, label, cls, earned });
-				setDrawn(drawnNums);
-				setRecentRounds((prev) => [
-					{
-						draw: drawnNums,
-						matches,
-						result: matches >= 2 ? "Won" : matches === 1 ? "Free" : "Loss",
-					},
-					...prev.slice(0, 4),
-				]);
-				setPlaying(false);
-				return;
-			}
-			setDrawn(drawnNums.slice(0, i + 1));
-			i++;
-		}, 280);
+				setDrawn(drawnNums.slice(0, i + 1));
+				i++;
+			}, 280);
+		} catch (e: any) {
+			sonnerToast.error(e?.message || "Failed to play");
+			addBalance(cost); // refund locally deducted cost
+			setPlaying(false);
+		}
 	};
 
 	const reset = () => {
