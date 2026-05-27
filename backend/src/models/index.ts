@@ -1,3 +1,16 @@
+export { Boost } from "./Boost.js";
+export { CrownDraw } from "./CrownDraw.js";
+export { CrownDrawEntry } from "./CrownDrawEntry.js";
+export { GameConfig } from "./GameConfig.js";
 export { Notification } from "./Notification.js";
+export { PlatformConfig } from "./PlatformConfig.js";
+export { QuickRound } from "./QuickRound.js";
+export { ScratchCard } from "./ScratchCard.js";
+export { ScratchRound } from "./ScratchRound.js";
+export { ShopItem } from "./ShopItem.js";
+export { SpinRound } from "./SpinRound.js";
+export { Ticket } from "./Ticket.js";
 export { Transaction } from "./Transaction.js";
 export { User } from "./User.js";
+export { WeeklyDraw } from "./WeeklyDraw.js";
+export { WeeklyEntry } from "./WeeklyEntry.js";

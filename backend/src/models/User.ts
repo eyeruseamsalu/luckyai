@@ -19,6 +19,22 @@ const userSchema = new Schema(
 		tickets: { type: Number, default: 0 },
 		streak: { type: Number, default: 0 },
 		activityPoints: { type: Number, default: 0 },
+		playsToday: { type: Number, default: 0 },
+		cashCapHit: { type: Boolean, default: false },
+		lastPlayDate: { type: Date, default: null },
+		activeBoosts: [
+			{
+				type: { type: String, enum: ["multiplier", "lossProtection", "premiumDay"] },
+				label: { type: String },
+				icon: { type: String },
+				expiresAfter: { type: Number },
+				expiresAt: { type: Date },
+				activatedAt: { type: Date, default: Date.now },
+			},
+		],
+		suggestionsUsed: { type: Number, default: 0 },
+		premiumExpiresAt: { type: Date, default: null },
+		dailyLastClaimed: { type: Date, default: null },
 	},
 	{ timestamps: true },
 );

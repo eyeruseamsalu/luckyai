@@ -20,7 +20,9 @@
 		"format:fix": "biome format --write ."
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.60.0",
 		"concurrently": "^9.1.2",
+		"mongodb-memory-server": "^11.1.0",
 		"playwright": "^1.60.0"
 	}
 }

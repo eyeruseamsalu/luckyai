@@ -104,7 +104,7 @@ interface Ctx {
 		msg: string,
 	) => void;
 	markAllRead: () => void;
-	claimDaily: () => void;
+	claimDaily: () => Promise<void>;
 	login: (email: string, password: string) => Promise<void>;
 	register: (data: {
 		name: string;
@@ -240,31 +240,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 		}));
 	}, []);
 
-	const claimDaily = useCallback(() => {
-		setState((s) => {
-			if (s.dailyClaimed) return s;
-			return {
+	const claimDaily = useCallback(async () => {
+		try {
+			const res = await api.claimDaily();
+			const { reward, streak } = res;
+			const totalCash = reward.cash + (reward.bonusCash || 0);
+			setState((s) => ({
 				...s,
-				balance: s.balance + 15,
-				starsBalance: s.starsBalance + 50,
+				balance: s.balance + totalCash,
+				starsBalance: s.starsBalance + reward.stars,
+				tickets: s.tickets + (reward.bonusTicket || 0),
 				dailyClaimed: true,
-				streak: s.streak + 1,
+				streak,
 				transactions: [
-					{ type: "in", desc: "Daily reward", date: "Just now", amt: 15 },
+					{ type: "in", desc: "Daily reward", date: "Just now", amt: totalCash },
 					...s.transactions,
 				],
 				notifications: [
 					{
 						icon: "ti-circle-check",
 						color: "tg",
-						msg: "Daily reward claimed — 15 ETB + 50 ★ added",
+						msg: `Daily reward claimed — ${totalCash} ETB + ${reward.stars} ★ added`,
 						time: "Just now",
 						read: false,
 					},
 					...s.notifications,
 				],
-			};
-		});
+			}));
+		} catch (e) {
+			const err = e as { statusCode?: number };
+			if (err.statusCode === 409) {
+				setState((s) => ({ ...s, dailyClaimed: true }));
+			}
+		}
 	}, []);
 
 	const login = useCallback(async (email: string, password: string) => {
@@ -325,9 +333,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 		setState((s) => ({ ...s, isPremium: true }));
 	}, []);
 
-	const updateUserData = useCallback((d: Partial<GameState["userData"]>) => {
-		setState((s) => ({ ...s, userData: { ...s.userData, ...d } }));
-	}, []);
+	const updateUserData = useCallback(
+		async (d: Partial<GameState["userData"]>) => {
+			try {
+				const res = await api.updateProfile({
+					name: d.name,
+					email: d.email,
+					phone: d.phone,
+				});
+				setState((s) => ({ ...s, ...buildStateFromUser(res.user) }));
+			} catch {}
+		},
+		[],
+	);
 
 	const addBoost = useCallback((b: ActiveBoost) => {
 		setState((s) => {

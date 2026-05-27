@@ -46,8 +46,7 @@ function formatDate(iso: string): string {
 }
 
 export default function Wallet() {
-	const { state, lang, addBalance, addTransaction, addNotification } =
-		useStore();
+	const { state, lang, addNotification, refreshUser } = useStore();
 	const [method, setMethod] = useState("telebirr");
 	const [amount, setAmount] = useState("");
 	const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
@@ -74,7 +73,7 @@ export default function Wallet() {
 		setTimeout(() => setToast(null), 3200);
 	};
 
-	const doDeposit = () => {
+	const doDeposit = async () => {
 		const a = parseFloat(amount);
 		if (!a || a < 10) {
 			showT("Minimum deposit is 10 ETB", "tx");
@@ -84,32 +83,23 @@ export default function Wallet() {
 			showT("Maximum single deposit is 50,000 ETB", "tx");
 			return;
 		}
-		addBalance(a);
-		addTransaction(
-			`${METHODS.find((m) => m.id === method)?.label} deposit`,
-			a,
-			"in",
-		);
-		addNotification(
-			"ti-coin",
-			"tg",
-			`${a.toLocaleString()} ETB deposited via ${METHODS.find((m) => m.id === method)?.label}`,
-		);
-		setTransactions((prev) => [
-			{
-				_id: "",
-				type: "in",
-				desc: `${METHODS.find((m) => m.id === method)?.label} deposit`,
-				amt: a,
-				createdAt: new Date().toISOString(),
-			},
-			...prev,
-		]);
-		showT(`${a.toLocaleString()} ETB added to your wallet`, "ts");
-		setAmount("");
+		try {
+			const res = await api.deposit(a);
+			await refreshUser();
+			setTransactions((prev) => [res.transaction, ...prev]);
+			addNotification(
+				"ti-coin",
+				"tg",
+				`${a.toLocaleString()} ETB deposited via ${METHODS.find((m) => m.id === method)?.label}`,
+			);
+			showT(`${a.toLocaleString()} ETB added to your wallet`, "ts");
+			setAmount("");
+		} catch {
+			showT("Deposit failed. Please try again.", "tx");
+		}
 	};
 
-	const doWithdraw = () => {
+	const doWithdraw = async () => {
 		const a = parseFloat(amount);
 		if (!a || a < 50) {
 			showT("Minimum withdrawal is 50 ETB", "tx");
@@ -119,24 +109,15 @@ export default function Wallet() {
 			showT("Insufficient balance", "tx");
 			return;
 		}
-		addBalance(-a);
-		addTransaction(
-			`Withdrawal to ${METHODS.find((m) => m.id === method)?.label}`,
-			-a,
-			"out",
-		);
-		setTransactions((prev) => [
-			{
-				_id: "",
-				type: "out",
-				desc: `Withdrawal to ${METHODS.find((m) => m.id === method)?.label}`,
-				amt: -a,
-				createdAt: new Date().toISOString(),
-			},
-			...prev,
-		]);
-		showT(`${a.toLocaleString()} ETB withdrawal initiated`, "ts");
-		setAmount("");
+		try {
+			const res = await api.withdraw(a);
+			await refreshUser();
+			setTransactions((prev) => [res.transaction, ...prev]);
+			showT(`${a.toLocaleString()} ETB withdrawal initiated`, "ts");
+			setAmount("");
+		} catch {
+			showT("Withdrawal failed. Insufficient balance or server error.", "tx");
+		}
 	};
 
 	return (

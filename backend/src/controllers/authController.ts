@@ -24,6 +24,13 @@ function toPublicUser(user: InstanceType<typeof User>) {
 		tickets: user.tickets,
 		streak: user.streak,
 		activityPoints: user.activityPoints,
+		playsToday: user.playsToday,
+		cashCapHit: user.cashCapHit,
+		lastPlayDate: user.lastPlayDate,
+		activeBoosts: user.activeBoosts,
+		suggestionsUsed: user.suggestionsUsed,
+		premiumExpiresAt: user.premiumExpiresAt,
+		dailyLastClaimed: user.dailyLastClaimed,
 	};
 }
 
@@ -97,6 +104,63 @@ export async function login(
 
 		const token = signToken(user._id.toString(), user.role as "user" | "admin");
 		res.json({ success: true, token, user: toPublicUser(user) });
+	} catch (err) {
+		next(err);
+	}
+}
+
+export async function updateProfile(
+	req: Request,
+	res: Response,
+	next: NextFunction,
+): Promise<void> {
+	try {
+		if (!req.auth) {
+			next(new ApiError(401, "Authentication required"));
+			return;
+		}
+
+		const { name, email, phone } = req.body as {
+			name?: string;
+			email?: string;
+			phone?: string;
+		};
+
+		const updateFields: Record<string, string> = {};
+
+		if (name !== undefined) {
+			if (!name.trim()) {
+				next(new ApiError(400, "Name cannot be empty"));
+				return;
+			}
+			updateFields.name = name.trim();
+		}
+
+		if (email !== undefined) {
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			if (!emailRegex.test(email)) {
+				next(new ApiError(400, "Invalid email format"));
+				return;
+			}
+			updateFields.email = email;
+		}
+
+		if (phone !== undefined) {
+			updateFields.phone = phone;
+		}
+
+		const updated = await User.findByIdAndUpdate(
+			req.auth.userId,
+			{ $set: updateFields },
+			{ new: true },
+		);
+
+		if (!updated) {
+			next(new ApiError(404, "User not found"));
+			return;
+		}
+
+		res.json({ success: true, user: toPublicUser(updated) });
 	} catch (err) {
 		next(err);
 	}
