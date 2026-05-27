@@ -28,6 +28,7 @@ export interface ApiUser {
   starsBalance: number;
   isPremium: boolean;
   tickets: number;
+  freeSpins?: number;
   streak: number;
   activityPoints: number;
   dailyClaimed?: boolean;

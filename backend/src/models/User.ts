@@ -31,6 +31,7 @@ const userSchema = new Schema(
     starsBalance: { type: Number, default: 0 },
     isPremium: { type: Boolean, default: false },
     tickets: { type: Number, default: 0 },
+    freeSpins: { type: Number, default: 0 },
     streak: { type: Number, default: 0 },
     activityPoints: { type: Number, default: 0 },
     dailyClaimed: { type: Boolean, default: false },

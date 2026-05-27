@@ -16,6 +16,7 @@ export async function toPublicUser(user: UserDocument) {
     starsBalance: user.starsBalance,
     isPremium: user.isPremium,
     tickets: user.tickets,
+    freeSpins: user.freeSpins ?? 0,
     streak: user.streak,
     activityPoints: user.activityPoints,
     dailyClaimed: user.dailyClaimed,

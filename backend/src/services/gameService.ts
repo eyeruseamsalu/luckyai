@@ -21,7 +21,7 @@ const CROWN_HYBRID_CASH = 250;
 const SPIN_SEGMENTS = [
   { label: "Try again", color: "#F0F0EB", text: "#6B6B64", val: 0, type: "lose", prob: 22 },
   { label: "10 ETB", color: "#FEF3C7", text: "#92400E", val: 10, type: "cash", prob: 14 },
-  { label: "Free ticket", color: "#EAF3DE", text: "#27500A", val: 0, type: "ticket", prob: 7 },
+  { label: "Free spin", color: "#EAF3DE", text: "#27500A", val: 0, type: "freeSpin", prob: 7 },
   { label: "5 ETB", color: "#E1F5EE", text: "#085041", val: 5, type: "cash", prob: 16 },
   { label: "50 Stars", color: "#FEF3C7", text: "#92400E", val: 50, type: "stars", prob: 13 },
   { label: "25 ETB", color: "#EEEDFE", text: "#3C3489", val: 25, type: "cash", prob: 9 },
@@ -141,13 +141,18 @@ export async function playSpin(userId: string, cost: number) {
   const config = await getAppConfig();
   const allowed = [config.spinCost, config.spinCost * 3, config.spinCost * 6, config.spinCost * 10];
   if (!allowed.includes(cost)) throw new ApiError(400, "Invalid spin cost");
-  ensureBalance(user, cost);
+  const usingFreeSpin = user.freeSpins > 0;
+  if (!usingFreeSpin) ensureBalance(user, cost);
 
-  user.balance -= cost;
+  if (usingFreeSpin) {
+    user.freeSpins -= 1;
+  } else {
+    user.balance -= cost;
+    await recordTransaction(user._id, "out", `Spin (${cost} ETB)`, -cost);
+    await distributeRevenue(cost, "spin", user._id);
+  }
   recordPlay(user);
   user.spinsToday += 1;
-  await recordTransaction(user._id, "out", `Spin (${cost} ETB)`, -cost);
-  await distributeRevenue(cost, "spin", user._id);
 
   const seg = pickSpinSegment();
   const segIdx = SPIN_SEGMENTS.indexOf(seg);
@@ -165,10 +170,10 @@ export async function playSpin(userId: string, cost: number) {
     await addStars(user, stars, "spin");
     await recordTransaction(user._id, "star", "Spin — Stars earned", stars);
     message = `${stars} Stars earned`;
-  } else if (seg.type === "ticket") {
-    user.tickets += 1;
-    await recordNotification(user._id, "ti-ticket", "tg", "Free Crown Draw ticket from spin");
-    message = "Free Crown Draw ticket added";
+  } else if (seg.type === "freeSpin") {
+    user.freeSpins += 1;
+    await recordNotification(user._id, "ti-rotate-clockwise", "tg", "Free spin unlocked from the wheel");
+    message = "Free spin unlocked — spin again at no cost";
   } else if (seg.type === "premium") {
     user.isPremium = true;
     await recordNotification(user._id, "ti-star", "ta", "Premium day unlocked from spin");

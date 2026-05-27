@@ -67,6 +67,7 @@ export interface GameState {
   transactions: Transaction[];
   notifications: Notification[];
   tickets: number;
+  freeSpins: number;
   streak: number;
   dailyClaimed: boolean;
   activityPoints: number;

@@ -6,7 +6,7 @@ import { gamesApi, ApiError } from '../lib/api';
 const SEGMENTS = [
   { label: 'Try again',    color: '#F0F0EB', text: '#6B6B64',  val: 0,    type: 'lose',    prob: 22 },
   { label: '10 ETB',       color: '#FEF3C7', text: '#92400E',  val: 10,   type: 'cash',    prob: 14 },
-  { label: 'Free ticket',  color: '#EAF3DE', text: '#27500A',  val: 0,    type: 'ticket',  prob: 7  },
+  { label: 'Free spin',    color: '#EAF3DE', text: '#27500A',  val: 0,    type: 'freeSpin', prob: 7  },
   { label: '5 ETB',        color: '#E1F5EE', text: '#085041',  val: 5,    type: 'cash',    prob: 16 },
   { label: '50 Stars',     color: '#FEF3C7', text: '#92400E',  val: 50,   type: 'stars',   prob: 13 },
   { label: '25 ETB',       color: '#EEEDFE', text: '#3C3489',  val: 25,   type: 'cash',    prob: 9  },
@@ -71,7 +71,7 @@ export default function Spin() {
   const spin = async () => {
     if (spinning) return;
     if (!state.isLoggedIn) { showT('Sign in to play', 'tx'); return; }
-    if (state.balance < cost) { showT('Insufficient balance. Top up to continue.', 'tx'); return; }
+    if (state.freeSpins <= 0 && state.balance < cost) { showT('Insufficient balance. Top up to continue.', 'tx'); return; }
 
     setSpinning(true);
     setResult(null);
@@ -93,8 +93,12 @@ export default function Spin() {
     }
 
     const step = 360 / SEGMENTS.length;
-    const targetDeg = 360 * 7 + (360 - segIdx * step) - step / 2;
     const startAngle = angleRef.current;
+    const desiredFinal = ((270 - segIdx * step - step / 2) % 360 + 360) % 360;
+    const startAngleNorm = startAngle % 360;
+    let delta = desiredFinal - startAngleNorm;
+    if (delta <= 0) delta += 360;
+    const targetDeg = 360 * 7 + delta;
     const start = Date.now();
     const dur = 4200 + Math.random() * 800;
 
@@ -115,7 +119,7 @@ export default function Spin() {
         setTotalSpins(n => n + 1);
         if (message) showT(message, seg.type === 'lose' ? 'tn-t' : 'ts');
         if (seg.type === 'cash' && !state.cashCapHit) setStreak(s => s + 1);
-        else if (seg.type === 'ticket' || seg.type === 'premium') setStreak(s => s + 1);
+        else if (seg.type === 'freeSpin' || seg.type === 'premium') setStreak(s => s + 1);
         else setStreak(0);
       }
     };
@@ -140,11 +144,16 @@ export default function Spin() {
             <div>
               <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2 }}>Try your chance</div>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                Spin to win cash, Stars, tickets, and premium access.
+                Spin to win cash, Stars, free spins, and premium access.
                 {totalSpins > 0 && ` Total spins: ${totalSpins}`}
               </div>
             </div>
-            <span className="pill p-amber">{Math.round(state.balance).toLocaleString()} ETB</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <span className="pill p-amber">{Math.round(state.balance).toLocaleString()} ETB</span>
+              {state.freeSpins > 0 && (
+                <span className="pill p-green">{state.freeSpins} free spin{state.freeSpins > 1 ? 's' : ''}</span>
+              )}
+            </div>
           </div>
 
           {/* Cost selector */}
@@ -182,6 +191,8 @@ export default function Spin() {
             }`} style={{ marginBottom: 12 }}>
               {result.type === 'lose'
                 ? `No prize — ${STAR_EARN_ON_LOSS} Stars earned. Spin again.`
+                : result.type === 'freeSpin'
+                  ? 'Free spin unlocked — spin again at no cost'
                 : result.type === 'stars' || (result.type === 'cash' && state.cashCapHit)
                   ? `Stars earned. Visit Stars Hub to track progress.`
                   : `${result.label}`}
@@ -192,7 +203,7 @@ export default function Spin() {
           {/* Spin button */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="abtn" style={{ flex: 2, padding: 10 }} onClick={spin} disabled={spinning}>
-              {spinning ? 'Spinning...' : `Spin — ${cost} ETB`}
+              {spinning ? 'Spinning...' : state.freeSpins > 0 ? 'Spin — Free' : `Spin — ${cost} ETB`}
             </button>
             <button className="sbtn" onClick={() => goPage('wallet')}>Top up</button>
           </div>
