@@ -1,21 +1,25 @@
 {
-  "name": "@workspace/luckyai",
-  "version": "0.0.0",
-  "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
-  "scripts": {
-    "dev": "concurrently -n web,api -c cyan,magenta \"npm run dev -w @workspace/luckyai-frontend\" \"npm run dev -w @workspace/luckyai-backend\"",
-    "dev:web": "npm run dev -w @workspace/luckyai-frontend",
-    "dev:api": "npm run dev -w @workspace/luckyai-backend",
-    "build": "npm run build -w @workspace/luckyai-frontend",
-    "build:web": "npm run build -w @workspace/luckyai-frontend",
-    "start:api": "npm run start -w @workspace/luckyai-backend",
-    "typecheck": "npm run typecheck -w @workspace/luckyai-frontend"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.2"
-  }
+	"name": "@workspace/luckyai",
+	"version": "0.0.0",
+	"private": true,
+	"workspaces": [
+		"frontend",
+		"backend"
+	],
+	"scripts": {
+		"dev": "concurrently -n web,api -c cyan,magenta \"npm run dev -w @workspace/luckyai-frontend\" \"npm run dev -w @workspace/luckyai-backend\"",
+		"dev:web": "npm run dev -w @workspace/luckyai-frontend",
+		"dev:api": "npm run dev -w @workspace/luckyai-backend",
+		"build": "npm run build -w @workspace/luckyai-frontend",
+		"build:web": "npm run build -w @workspace/luckyai-frontend",
+		"start:api": "npm run start -w @workspace/luckyai-backend",
+		"typecheck": "npm run typecheck -w @workspace/luckyai-frontend",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format .",
+		"format:fix": "biome format --write ."
+	},
+	"devDependencies": {
+		"concurrently": "^9.1.2"
+	}
 }

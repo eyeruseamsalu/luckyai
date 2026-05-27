@@ -15,15 +15,17 @@ app.use("/api", apiRoutes);
 app.use(errorHandler);
 
 async function start(): Promise<void> {
-  await connectDB();
+	await connectDB();
 
-  app.listen(env.port, () => {
-    console.log(`[api] LuckyAI backend listening on http://localhost:${env.port}`);
-    console.log(`[api] Health check: http://localhost:${env.port}/api/health`);
-  });
+	app.listen(env.port, () => {
+		console.log(
+			`[api] LuckyAI backend listening on http://localhost:${env.port}`,
+		);
+		console.log(`[api] Health check: http://localhost:${env.port}/api/health`);
+	});
 }
 
 start().catch((err) => {
-  console.error("[api] Failed to start server", err);
-  process.exit(1);
+	console.error("[api] Failed to start server", err);
+	process.exit(1);
 });
