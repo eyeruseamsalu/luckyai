@@ -13,6 +13,7 @@ const userSchema = new Schema(
 		phone: { type: String, default: "" },
 		passwordHash: { type: String, required: true },
 		role: { type: String, enum: ["user", "admin"], default: "user" },
+		status: { type: String, enum: ["active", "suspended"], default: "active" },
 		balance: { type: Number, default: 0 },
 		starsBalance: { type: Number, default: 0 },
 		isPremium: { type: Boolean, default: false },
