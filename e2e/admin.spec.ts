@@ -198,7 +198,7 @@ test.describe("Admin API", () => {
 		expect(updated!.isPremium).toBe(true);
 	});
 
-	test("suspend user sets status to suspended", async ({ request }) => {
+	test("suspend user sets role to suspended", async ({ request }) => {
 		const token = await createAdminAndGetToken(request, "admin-suspend@e2e.test");
 
 		const hash = await bcrypt.hash("pw", 10);
@@ -216,13 +216,13 @@ test.describe("Admin API", () => {
 
 		const body = await res.json();
 		expect(body.success).toBe(true);
-		expect(body.user.status).toBe("suspended");
+		expect(body.user.role).toBe("suspended");
 
 		const dbUser = await mongoose.model("User").findById(user._id);
-		expect(dbUser!.status).toBe("suspended");
+		expect(dbUser!.role).toBe("suspended");
 	});
 
-	test("activate user sets status to active", async ({ request }) => {
+	test("activate user sets role to user", async ({ request }) => {
 		const token = await createAdminAndGetToken(request, "admin-activate@e2e.test");
 
 		const hash = await bcrypt.hash("pw", 10);
@@ -230,7 +230,7 @@ test.describe("Admin API", () => {
 			name: "Activate Me",
 			email: "activate@e2e.test",
 			passwordHash: hash,
-			status: "suspended",
+			role: "suspended",
 		});
 
 		await request.put(
@@ -239,7 +239,7 @@ test.describe("Admin API", () => {
 		);
 
 		const dbUser = await mongoose.model("User").findById(user._id);
-		expect(dbUser!.status).toBe("active");
+		expect(dbUser!.role).toBe("user");
 	});
 
 	// -----------------------------------------------------------------------

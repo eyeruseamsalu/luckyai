@@ -164,7 +164,7 @@ export async function suspendUser(
 		const { id } = req.params;
 		const user = await User.findByIdAndUpdate(
 			id,
-			{ $set: { status: "suspended" } },
+			{ $set: { role: "suspended" } },
 			{ new: true },
 		);
 		if (!user) {
@@ -186,7 +186,7 @@ export async function activateUser(
 		const { id } = req.params;
 		const user = await User.findByIdAndUpdate(
 			id,
-			{ $set: { status: "active" } },
+			{ $set: { role: "user" } },
 			{ new: true },
 		);
 		if (!user) {

@@ -1449,11 +1449,11 @@ test.describe("LuckyAI Full Integration", () => {
 			expect(suspendRes.status()).toBe(200);
 			let body = await suspendRes.json();
 			expect(body.success).toBe(true);
-			expect(body.user.status).toBe("suspended");
+			expect(body.user.role).toBe("suspended");
 
 			// Verify DB
 			let dbUser = await mongoose.model("User").findById(user._id);
-			expect(dbUser!.status).toBe("suspended");
+			expect(dbUser!.role).toBe("suspended");
 
 			// Activate
 			const activateRes = await request.put(
@@ -1462,10 +1462,10 @@ test.describe("LuckyAI Full Integration", () => {
 			);
 			expect(activateRes.status()).toBe(200);
 			body = await activateRes.json();
-			expect(body.user.status).toBe("active");
+			expect(body.user.role).toBe("user");
 
 			dbUser = await mongoose.model("User").findById(user._id);
-			expect(dbUser!.status).toBe("active");
+			expect(dbUser!.role).toBe("user");
 		});
 
 		test("11f: Create crown draw and verify it appears in list", async ({
