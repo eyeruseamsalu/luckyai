@@ -2,6 +2,8 @@ import { useState } from "react";
 import BonusMode from "../components/BonusMode";
 import { useStore } from "../store";
 import { t } from "../translations";
+import { playGame } from "@/lib/api";
+import { toast } from "sonner";
 
 const CARD_NAMES = [
 	"Timkat",
@@ -33,79 +35,9 @@ interface Prize {
 	cash?: number;
 	stars: number;
 	boostLabel?: string;
-	weight: number;
 }
-
-const PRIZES: Prize[] = [
-	{
-		tier: "high",
-		headline: "You won 200 ETB",
-		sub: "Triple match. Added to your balance.",
-		cash: 200,
-		stars: 100,
-		weight: 2,
-	},
-	{
-		tier: "high",
-		headline: "You won 80 ETB",
-		sub: "Strong match. Credited instantly.",
-		cash: 80,
-		stars: 60,
-		weight: 5,
-	},
-	{
-		tier: "mid",
-		headline: "You won 30 ETB + 50 Stars",
-		sub: "Good card. Both rewards credited.",
-		cash: 30,
-		stars: 50,
-		weight: 10,
-	},
-	{
-		tier: "mid",
-		headline: "You won 10 ETB + 30 Stars",
-		sub: "Partial match. Rewards added.",
-		cash: 10,
-		stars: 30,
-		weight: 16,
-	},
-	{
-		tier: "asset",
-		headline: "You unlocked 2x Stars Boost",
-		sub: "Your next 5 plays earn double Stars. Plus 25 Stars.",
-		stars: 25,
-		boostLabel: "2x Stars next 5 plays",
-		weight: 22,
-	},
-	{
-		tier: "asset",
-		headline: "You unlocked Loss Protection",
-		sub: "Your stake is refunded on next 3 losses. Plus 20 Stars.",
-		stars: 20,
-		boostLabel: "Loss protection x3",
-		weight: 22,
-	},
-	{
-		tier: "asset",
-		headline: "You unlocked a Bonus Entry",
-		sub: "One Crown Draw bonus entry added. Plus 35 Stars.",
-		stars: 35,
-		boostLabel: "Crown Draw entry",
-		weight: 23,
-	},
-];
 
 const COST_OPTIONS = [5, 10, 25, 50];
-
-function pickPrize(): Prize {
-	const total = PRIZES.reduce((a, p) => a + p.weight, 0);
-	let r = Math.random() * total;
-	for (const p of PRIZES) {
-		r -= p.weight;
-		if (r <= 0) return p;
-	}
-	return PRIZES[PRIZES.length - 1];
-}
 
 function nameForIndex(setKey: number, idx: number) {
 	return CARD_NAMES[(setKey * 9 + idx) % CARD_NAMES.length];
@@ -121,9 +53,163 @@ interface CardProps {
 function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
 	const store = useStore();
 	const [revealed, setRevealed] = useState(false);
-	const [prize] = useState<Prize>(pickPrize);
+	const [prize, setPrize] = useState<Prize | null>(null);
+	const [playing, setPlaying] = useState(false);
 	const name = nameForIndex(setKey, index);
 	const lang = store.lang;
+
+	const reveal = async () => {
+		if (revealed || playing) return;
+		if (store.state.balance < cost) return;
+		setPlaying(true);
+		try {
+			const res = (await playGame("scratch", { cost })) as unknown as {
+				success: boolean;
+				prize: Prize;
+				wonCash: number;
+				wonStars: number;
+				newBalance: number;
+				newStarsBalance: number;
+				cashCapHit: boolean;
+			};
+			const p = res.prize;
+			setPrize(p);
+			store.addTransaction(
+				`Scratch card — ${name} (${cost} ETB)`,
+				-cost,
+				"out",
+			);
+			if (res.wonCash > 0) {
+				store.addBalance(res.wonCash);
+				store.addTransaction(
+					`Scratch Win — ${name}`,
+					res.wonCash,
+					"in",
+				);
+			}
+			if (res.wonStars > 0) {
+				store.addStars(res.wonStars);
+				store.addTransaction(
+					`Scratch Win Stars — ${name}`,
+					res.wonStars,
+					"star",
+				);
+			}
+			if (p.tier === "asset" && p.boostLabel) {
+				const boostType = p.boostLabel.includes("2x")
+					? "multiplier"
+					: p.boostLabel.includes("Loss")
+						? "lossProtection"
+						: "premiumDay";
+				store.addBoost({
+					type: boostType,
+					label: p.boostLabel,
+					icon: "ti-star",
+					expiresAfter: 5,
+				});
+			}
+			store.recordPlay();
+			setRevealed(true);
+			onReveal(p);
+		} catch {
+			toast.error("Failed to play");
+		} finally {
+			setPlaying(false);
+		}
+	};
+
+	if (!revealed || !prize) {
+		if (!prize) {
+			const canAfford = store.state.balance >= cost;
+			return (
+				<div
+					onClick={reveal}
+					style={{
+						borderRadius: 16,
+						background: canAfford ? "#EEEDFE" : "var(--bg)",
+						border: `1.5px solid ${canAfford ? "#C4BEFA" : "var(--border2)"}`,
+						cursor: playing
+							? "wait"
+							: canAfford
+								? "pointer"
+								: "not-allowed",
+						padding: "18px 14px",
+						display: "flex",
+						flexDirection: "column",
+						alignItems: "center",
+						justifyContent: "center",
+						minHeight: 148,
+						transition: "box-shadow .15s, transform .1s",
+						userSelect: "none",
+					}}
+					onMouseEnter={(e) => {
+						if (canAfford && !playing) {
+							(e.currentTarget as HTMLDivElement).style.boxShadow =
+								"0 4px 18px rgba(124,100,230,.18)";
+							(e.currentTarget as HTMLDivElement).style.transform =
+								"translateY(-2px)";
+						}
+					}}
+					onMouseLeave={(e) => {
+						(e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+						(e.currentTarget as HTMLDivElement).style.transform =
+							"translateY(0)";
+					}}
+				>
+					<div
+						style={{
+							fontSize: 10,
+							color: "#8F87CC",
+							fontWeight: 500,
+							marginBottom: 10,
+							alignSelf: "flex-start",
+						}}
+					>
+						{name}
+					</div>
+					<div
+						style={{
+							fontSize: 40,
+							color: "#7B68EE",
+							fontWeight: 700,
+							lineHeight: 1,
+							marginBottom: 10,
+						}}
+					>
+						{playing ? "..." : "?"}
+					</div>
+					<div
+						style={{
+							fontSize: 11,
+							color: canAfford ? "#8F87CC" : "var(--text3)",
+							textAlign: "center",
+						}}
+					>
+						{playing
+							? "Revealing..."
+							: canAfford
+								? t(lang, "clickReveal")
+								: "Insufficient balance"}
+					</div>
+					{canAfford && !playing && (
+						<div
+							style={{
+								marginTop: 8,
+								fontSize: 10,
+								color: "#AAA4DD",
+								background: "rgba(255,255,255,.5)",
+								borderRadius: 5,
+								padding: "2px 8px",
+							}}
+						>
+							{cost} ETB
+						</div>
+					)}
+				</div>
+			);
+		}
+		return null;
+	}
 
 	const tierColor = {
 		high: "var(--amber-dark)",
@@ -140,103 +226,6 @@ function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
 		mid: "var(--green)",
 		asset: "var(--purple)",
 	}[prize.tier];
-
-	const reveal = () => {
-		if (revealed) return;
-		if (store.state.balance < cost) return;
-		if (!store.deductBalance(cost)) return;
-		store.addTransaction(`Scratch card — ${name} (${cost} ETB)`, -cost, "out");
-		if (prize.cash && !store.state.cashCapHit) {
-			store.addBalance(prize.cash);
-			store.addTransaction(`Scratch Win — ${name}`, prize.cash, "in");
-		}
-		store.addStars(prize.stars);
-		store.addTransaction(`Scratch Win Stars — ${name}`, prize.stars, "star");
-		store.recordPlay();
-		setRevealed(true);
-		onReveal(prize);
-	};
-
-	if (!revealed) {
-		const canAfford = store.state.balance >= cost;
-		return (
-			<div
-				onClick={reveal}
-				style={{
-					borderRadius: 16,
-					background: canAfford ? "#EEEDFE" : "var(--bg)",
-					border: `1.5px solid ${canAfford ? "#C4BEFA" : "var(--border2)"}`,
-					cursor: canAfford ? "pointer" : "not-allowed",
-					padding: "18px 14px",
-					display: "flex",
-					flexDirection: "column",
-					alignItems: "center",
-					justifyContent: "center",
-					minHeight: 148,
-					transition: "box-shadow .15s, transform .1s",
-					userSelect: "none",
-				}}
-				onMouseEnter={(e) => {
-					if (canAfford) {
-						(e.currentTarget as HTMLDivElement).style.boxShadow =
-							"0 4px 18px rgba(124,100,230,.18)";
-						(e.currentTarget as HTMLDivElement).style.transform =
-							"translateY(-2px)";
-					}
-				}}
-				onMouseLeave={(e) => {
-					(e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-					(e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-				}}
-			>
-				<div
-					style={{
-						fontSize: 10,
-						color: "#8F87CC",
-						fontWeight: 500,
-						marginBottom: 10,
-						alignSelf: "flex-start",
-					}}
-				>
-					{name}
-				</div>
-				<div
-					style={{
-						fontSize: 40,
-						color: "#7B68EE",
-						fontWeight: 700,
-						lineHeight: 1,
-						marginBottom: 10,
-					}}
-				>
-					?
-				</div>
-				<div
-					style={{
-						fontSize: 11,
-						color: canAfford ? "#8F87CC" : "var(--text3)",
-						textAlign: "center",
-					}}
-				>
-					{canAfford ? t(lang, "clickReveal") : "Insufficient balance"}
-				</div>
-				{canAfford && (
-					<div
-						style={{
-							marginTop: 8,
-							fontSize: 10,
-							color: "#AAA4DD",
-							background: "rgba(255,255,255,.5)",
-							borderRadius: 5,
-							padding: "2px 8px",
-						}}
-					>
-						{cost} ETB
-					</div>
-				)}
-			</div>
-		);
-	}
 
 	return (
 		<div

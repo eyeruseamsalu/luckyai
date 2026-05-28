@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import { t } from "../translations";
+import { enterWeeklyDraw, getWeeklyCurrent, getWeeklyResult } from "../lib/api";
+import type { WeeklyDrawResult } from "../types";
+import { toast } from "sonner";
 
 const PICK_COUNT = 6;
 const ENTRY_STARS = 800;
@@ -35,6 +38,7 @@ export default function Weekly() {
 		addNotification,
 		addTicket,
 		addWeeklyEntry,
+		setWeeklyDrawResult,
 	} = useStore();
 	const [picks, setPicks] = useState<number[]>([]);
 	const [toast, setToast] = useState("");
@@ -61,7 +65,7 @@ export default function Weekly() {
 		setPicks([...s].sort((a, b) => a - b));
 	};
 
-	const confirm = () => {
+	const confirm = async () => {
 		if (picks.length < PICK_COUNT) {
 			showT(`Pick all ${PICK_COUNT} numbers first`, "tx");
 			return;
@@ -70,34 +74,52 @@ export default function Weekly() {
 			showT(`Need ${ENTRY_STARS} Stars — earn more by playing`, "tx");
 			return;
 		}
-		const ok = spendStars(ENTRY_STARS);
-		if (!ok) {
-			showT("Could not deduct Stars", "tx");
-			return;
+		try {
+			const res = await enterWeeklyDraw({
+				numbers: picks.slice().sort((a, b) => a - b),
+			});
+			spendStars(ENTRY_STARS);
+			addWeeklyEntry(picks.slice().sort((a, b) => a - b));
+			addTransaction(
+				`Weekly draw entry — ${picks
+					.slice()
+					.sort((a, b) => a - b)
+					.map((n) => String(n).padStart(2, "0"))
+					.join(", ")}`,
+				-ENTRY_STARS,
+				"star",
+			);
+			addNotification(
+				"ti-calendar-stats",
+				"tp",
+				`Weekly draw entry confirmed: ${picks
+					.slice()
+					.sort((a, b) => a - b)
+					.map((n) => String(n).padStart(2, "0"))
+					.join(", ")}`,
+			);
+			addTicket();
+			setPicks([]);
+			showT(t(lang, "entryConfirmed"), "ts");
+			toast.success("Entry submitted successfully!");
+		} catch (err) {
+			showT(
+				err instanceof Error ? err.message : "Failed to submit entry",
+				"tx",
+			);
 		}
-		addWeeklyEntry(picks.slice().sort((a, b) => a - b));
-		addTransaction(
-			`Weekly draw entry — ${picks
-				.slice()
-				.sort((a, b) => a - b)
-				.map((n) => String(n).padStart(2, "0"))
-				.join(", ")}`,
-			-ENTRY_STARS,
-			"star",
-		);
-		addNotification(
-			"ti-calendar-stats",
-			"tp",
-			`Weekly draw entry confirmed: ${picks
-				.slice()
-				.sort((a, b) => a - b)
-				.map((n) => String(n).padStart(2, "0"))
-				.join(", ")}`,
-		);
-		addTicket();
-		setPicks([]);
-		showT(t(lang, "entryConfirmed"), "ts");
 	};
+
+	useEffect(() => {
+		getWeeklyCurrent().catch(() => {});
+		getWeeklyResult()
+			.then((res) => {
+				if (res.result) {
+					setWeeklyDrawResult(res.result as WeeklyDrawResult);
+				}
+			})
+			.catch(() => {});
+	}, []);
 
 	const dr = state.weeklyDrawResult;
 

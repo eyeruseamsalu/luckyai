@@ -1,28 +1,41 @@
+import { useEffect, useState } from "react";
+import { getTickets } from "../lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
 
-const ACTIVE_TICKETS = [
-	{
-		id: "TK-2024-001",
-		draw: "Crown Draw — June 15",
-		picks: [7, 13, 21, 28, 34, 42],
-		bought: "May 20, 2025",
-		prize: "500,000 ETB jackpot",
-		type: "cash",
-	},
-	{
-		id: "TK-2024-002",
-		draw: "Crown Draw — June 15",
-		picks: [3, 9, 17, 25, 38, 47],
-		bought: "May 22, 2025",
-		prize: "500,000 ETB jackpot",
-		type: "star",
-	},
-];
-
 export default function Tickets() {
 	const { state, lang, goPage } = useStore();
+	const [tickets, setTickets] = useState<Array<Record<string, unknown>>>([]);
 	const allTickets = state.tickets;
+
+	useEffect(() => {
+		getTickets()
+			.then((res) => {
+				const data = res as unknown as {
+					tickets: Array<Record<string, unknown>>;
+				};
+				if (data?.tickets) {
+					setTickets(
+						data.tickets.map((t: Record<string, unknown>) => ({
+							id: t._id,
+							draw:
+								t.drawType === "crown"
+									? "Crown Draw"
+									: "Weekly Draw",
+							picks: [] as number[],
+							bought: t.purchaseDate
+								? new Date(
+										t.purchaseDate as string,
+									).toLocaleDateString()
+								: "",
+							prize: "—",
+							type: t.entryType,
+						})),
+					);
+				}
+			})
+			.catch(() => {});
+	}, []);
 
 	return (
 		<div className="pg on" id="p-tickets">
@@ -91,7 +104,7 @@ export default function Tickets() {
 							</button>
 						</div>
 					) : (
-						ACTIVE_TICKETS.map((tk, i) => (
+						tickets.map((tk, i) => (
 							<div
 								key={i}
 								className="card"

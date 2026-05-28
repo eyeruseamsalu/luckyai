@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import { t } from "../translations";
+import { activateBoost, getActiveBoosts } from "@/lib/api";
+import { toast } from "sonner";
 
 const CROWN_STAR_COST = 1500;
 const WEEKLY_STAR_COST = 800;
@@ -17,12 +19,84 @@ export default function Stars() {
 		addNotification,
 		addTicket,
 		goPage,
+		addBoost,
+		addStars,
+		refreshUser,
 	} = useStore();
-	const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
+	const [localToast, setLocalToast] = useState<{
+		msg: string;
+		cls: string;
+	} | null>(null);
 
 	const showT = (msg: string, cls: string) => {
-		setToast({ msg, cls });
-		setTimeout(() => setToast(null), 3500);
+		setLocalToast({ msg, cls });
+		setTimeout(() => setLocalToast(null), 3500);
+	};
+
+	const [activeBoosts, setActiveBoosts] = useState<
+		{ type: string; label: string; icon: string; expiresAfter: number }[]
+	>([]);
+	const [activating, setActivating] = useState<string | null>(null);
+
+	useEffect(() => {
+		getActiveBoosts()
+			.then((res) => setActiveBoosts(res.boosts))
+			.catch(() => {});
+	}, []);
+
+	const BOOST_OPTIONS = [
+		{
+			type: "multiplier" as const,
+			label: "2x Stars",
+			icon: "ti-bolt",
+			cost: 150,
+			desc: "Multiply your Star earnings by 2 for the next 5 plays",
+		},
+		{
+			type: "lossProtection" as const,
+			label: "Loss Protection",
+			icon: "ti-shield",
+			cost: 80,
+			desc: "Keep your Stars streak safe for 3 plays",
+		},
+		{
+			type: "premiumDay" as const,
+			label: "Premium Day",
+			icon: "ti-crown",
+			cost: 200,
+			desc: "Unlock Premium status for 24 hours",
+		},
+	];
+
+	const handleActivateBoost = async (
+		type: "multiplier" | "lossProtection" | "premiumDay",
+		cost: number,
+	) => {
+		if (activating) return;
+		setActivating(type);
+
+		const hadStars = spendStars(cost);
+		if (!hadStars) {
+			toast.error(`You need ${cost}★ to activate this boost`);
+			setActivating(null);
+			return;
+		}
+
+		try {
+			const res = await activateBoost(type);
+			addBoost(res.boost as any);
+			refreshUser();
+			setActiveBoosts((prev) => [
+				...prev.filter((b) => b.type !== type),
+				res.boost as any,
+			]);
+			toast.success(`${res.boost.label} activated!`);
+		} catch (err: any) {
+			addStars(cost);
+			toast.error(err?.message || "Failed to activate boost");
+		} finally {
+			setActivating(null);
+		}
 	};
 
 	const crownPct = Math.min(
@@ -269,9 +343,9 @@ export default function Stars() {
 					</div>
 				</div>
 
-				{toast && (
-					<div className={`toast ${toast.cls}`} style={{ marginBottom: 13 }}>
-						{toast.msg}
+				{localToast && (
+					<div className={`toast ${localToast.cls}`} style={{ marginBottom: 13 }}>
+						{localToast.msg}
 					</div>
 				)}
 
@@ -524,6 +598,129 @@ export default function Stars() {
 								? t(lang, "enterWeeklyNow")
 								: `${WEEKLY_STAR_COST - state.starsBalance} ${t(lang, "stars")} short`}
 						</button>
+					</div>
+				</div>
+
+				{/* Boosts */}
+				<div className="card" style={{ marginBottom: 13 }}>
+					<div
+						style={{
+							fontSize: 13,
+							fontWeight: 500,
+							marginBottom: 12,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+						}}
+					>
+						<span>Boosts</span>
+						{activeBoosts.length > 0 && (
+							<span
+								style={{
+									fontSize: 11,
+									color: "var(--text2)",
+									fontWeight: 400,
+								}}
+							>
+								{activeBoosts.length} active
+							</span>
+						)}
+					</div>
+
+					{/* Active boosts */}
+					{activeBoosts.length > 0 && (
+						<div
+							style={{
+								display: "flex",
+								flexWrap: "wrap",
+								gap: 7,
+								marginBottom: 12,
+							}}
+						>
+							{activeBoosts.map((b) => (
+								<div
+									key={b.type}
+									style={{
+										background: "var(--star-light)",
+										borderRadius: 6,
+										padding: "5px 10px",
+										fontSize: 11,
+										display: "flex",
+										alignItems: "center",
+										gap: 5,
+										border: "1px solid var(--star)",
+									}}
+								>
+									<i className={b.icon} />
+									<span style={{ fontWeight: 500 }}>{b.label}</span>
+									<span style={{ color: "var(--text2)" }}>
+										{b.expiresAfter} left
+									</span>
+								</div>
+							))}
+						</div>
+					)}
+
+					<div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+						{BOOST_OPTIONS.map((boost) => {
+							const isActive = activeBoosts.some((b) => b.type === boost.type);
+							const isLoading = activating === boost.type;
+							return (
+								<div
+									key={boost.type}
+									style={{
+										background: "var(--bg)",
+										borderRadius: 9,
+										padding: "12px 14px",
+										border: isActive
+											? "1px solid var(--star)"
+											: "0.5px solid var(--border)",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "space-between",
+										opacity: isActive ? 0.7 : 1,
+									}}
+								>
+									<div style={{ flex: 1 }}>
+										<div
+											style={{
+												fontSize: 13,
+												fontWeight: 500,
+												marginBottom: 2,
+												display: "flex",
+												alignItems: "center",
+												gap: 6,
+											}}
+										>
+											<i className={boost.icon} />
+											{boost.label}
+										</div>
+										<div style={{ fontSize: 11, color: "var(--text2)" }}>
+											{boost.desc}
+										</div>
+									</div>
+									<button
+										className={isActive ? "sbtn" : "stbtn"}
+										style={{
+											marginLeft: 14,
+											flexShrink: 0,
+											fontSize: 11,
+											padding: "7px 14px",
+											minWidth: 65,
+										}}
+										disabled={isActive || isLoading}
+										onClick={() => handleActivateBoost(boost.type, boost.cost)}
+									>
+										{isLoading
+											? "..."
+
+											: isActive
+												? "Active"
+												: `${boost.cost}★`}
+									</button>
+								</div>
+							);
+						})}
 					</div>
 				</div>
 

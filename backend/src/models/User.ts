@@ -19,6 +19,7 @@ const userSchema = new Schema(
 		tickets: { type: Number, default: 0 },
 		streak: { type: Number, default: 0 },
 		activityPoints: { type: Number, default: 0 },
+		consecutiveWins: { type: Number, default: 0 },
 		playsToday: { type: Number, default: 0 },
 		cashCapHit: { type: Boolean, default: false },
 		lastPlayDate: { type: Date, default: null },
@@ -35,6 +36,7 @@ const userSchema = new Schema(
 		suggestionsUsed: { type: Number, default: 0 },
 		premiumExpiresAt: { type: Date, default: null },
 		dailyLastClaimed: { type: Date, default: null },
+		bonusDrawEntries: { type: Number, default: 0 },
 	},
 	{ timestamps: true },
 );

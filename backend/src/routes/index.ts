@@ -9,6 +9,7 @@ import healthRoutes from "./healthRoutes.js";
 import notificationRoutes from "./notificationRoutes.js";
 import profileRoutes from "./profileRoutes.js";
 import shopRoutes from "./shopRoutes.js";
+import ticketRoutes from "./ticketRoutes.js";
 import walletRoutes from "./walletRoutes.js";
 
 const router = Router();
@@ -22,6 +23,7 @@ router.use("/daily", dailyRoutes);
 router.use("/profile", profileRoutes);
 router.use("/boosts", boostRoutes);
 router.use("/shop", shopRoutes);
+router.use("/tickets", ticketRoutes);
 router.use("/draws", drawRoutes);
 router.use("/admin", adminRoutes);
 
