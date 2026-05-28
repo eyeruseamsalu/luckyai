@@ -134,7 +134,7 @@ export default function Spin() {
 	useEffect(() => {
 		getGameHistory("spin")
 			.then((res) => {
-				if (res?.rounds) setHistory(res.rounds);
+				if (res?.rounds) setHistory(res.rounds as unknown as Record<string, unknown>[]);
 			})
 			.catch(() => {});
 	}, []);
@@ -205,10 +205,7 @@ export default function Spin() {
 		setResult(null);
 
 		try {
-			const res = (await playGame("spin", { cost })) as Record<
-				string,
-				unknown
-			>;
+			const res = (await playGame("spin", { cost })) as unknown as Record<string, unknown>;
 			const {
 				segment,
 				wonCash,
@@ -276,11 +273,7 @@ export default function Spin() {
 					setTotalSpins((n) => n + 1);
 
 					if (dispSeg.type === "cash" && !ccHit) {
-						addTransaction(
-							`Spin win — ${wonCash} ETB`,
-							wonCash,
-							"in",
-						);
+						addTransaction(`Spin win — ${wonCash} ETB`, wonCash, "in");
 						addNotification(
 							"ti-coin",
 							"tg",
@@ -288,11 +281,7 @@ export default function Spin() {
 						);
 						showT(`${wonCash} ETB added to your balance`, "ts");
 					} else if (dispSeg.type === "stars" || ccHit) {
-						addTransaction(
-							`Spin — Stars earned`,
-							wonStars,
-							"star",
-						);
+						addTransaction(`Spin — Stars earned`, wonStars, "star");
 						showT(`${wonStars} Stars earned`, "tstar");
 					} else if (dispSeg.type === "ticket") {
 						addNotification(
@@ -302,11 +291,7 @@ export default function Spin() {
 						);
 						showT("Free Crown Draw ticket added", "ts");
 					} else if (dispSeg.type === "premium") {
-						addNotification(
-							"ti-star",
-							"ta",
-							"Premium day unlocked from spin",
-						);
+						addNotification("ti-star", "ta", "Premium day unlocked from spin");
 						showT("Premium access for 24 hours", "ts");
 					} else {
 						addTransaction("Spin — Stars", wonStars, "star");

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { useStore } from "../store";
-import * as api from "../lib/api";
 import type { AdminUser } from "../lib/api";
+import * as api from "../lib/api";
+import { useStore } from "../store";
 import type { WeeklyDrawResult } from "../types";
 
 type AdminTab =
@@ -32,7 +32,10 @@ export default function Admin() {
 	const [toast, setToast] = useState<string | null>(null);
 
 	// Overview
-	const [overviewStats, setOverviewStats] = useState<Record<string, unknown> | null>(null);
+	const [overviewStats, setOverviewStats] = useState<Record<
+		string,
+		unknown
+	> | null>(null);
 
 	// Users
 	const [users, setUsers] = useState<AdminUser[]>([]);
@@ -45,8 +48,13 @@ export default function Admin() {
 	const [crownDraws, setCrownDraws] = useState<Record<string, unknown>[]>([]);
 
 	// Weekly Draw
-	const [weeklyDraw, setWeeklyDraw] = useState<Record<string, unknown> | null>(null);
-	const [localDrawResult, setLocalDrawResult] = useState<Record<string, unknown> | null>(null);
+	const [weeklyDraw, setWeeklyDraw] = useState<Record<string, unknown> | null>(
+		null,
+	);
+	const [localDrawResult, setLocalDrawResult] = useState<Record<
+		string,
+		unknown
+	> | null>(null);
 
 	// Game Config
 	const [spinCost, setSpinCost] = useState(5);
@@ -56,68 +64,78 @@ export default function Admin() {
 
 	// Economy
 	const [starRate, setStarRate] = useState(35);
-	const [economyItems, setEconomyItems] = useState<Record<string, unknown>[]>([]);
+	const [economyItems, setEconomyItems] = useState<Record<string, unknown>[]>(
+		[],
+	);
 
 	// Platform Config
-	const [platformConfig, setPlatformConfig] = useState<Record<string, unknown>>({});
+	const [platformConfig, setPlatformConfig] = useState<Record<string, unknown>>(
+		{},
+	);
 
 	const showT = useCallback((msg: string) => {
 		setToast(msg);
 		setTimeout(() => setToast(null), 3000);
 	}, []);
 
-	const loadTabData = useCallback(async (t: AdminTab) => {
-		try {
-			switch (t) {
-				case "overview": {
-					const res = await api.getAdminOverview();
-					setOverviewStats(res.stats);
-					break;
+	const loadTabData = useCallback(
+		async (t: AdminTab) => {
+			try {
+				switch (t) {
+					case "overview": {
+						const res = await api.getAdminOverview();
+						setOverviewStats(res.stats);
+						break;
+					}
+					case "users": {
+						const res = await api.getAdminUsers({
+							page: usersPage,
+							search: searchQuery,
+						});
+						setUsers(res.users as AdminUser[]);
+						setUsersTotal(res.total);
+						setUsersPages(res.pages);
+						break;
+					}
+					case "draws": {
+						const res = await api.getAdminCrownDraws();
+						setCrownDraws(res.draws as Record<string, unknown>[]);
+						break;
+					}
+					case "weekly": {
+						const res = await api.getAdminWeeklyDraw();
+						setWeeklyDraw(res.draw as Record<string, unknown> | null);
+						break;
+					}
+					case "games": {
+						const res = await api.getGameConfig();
+						const cfg = res.config as Record<string, unknown>;
+						if (cfg.spinCost) setSpinCost(cfg.spinCost as number);
+						if (cfg.scratchCost) setScCost(cfg.scratchCost as number);
+						if (cfg.quickPlayCost) setQpCost(cfg.quickPlayCost as number);
+						if (cfg.cashCapPlays) setCashCap(cfg.cashCapPlays as number);
+						break;
+					}
+					case "economy": {
+						const res = await api.getEconomyConfig();
+						const cfg = res.config as Record<string, unknown>;
+						setStarRate((cfg.starEarnRate as number) ?? 35);
+						const itemsRes = await api.getEconomyItems();
+						setEconomyItems(itemsRes.items as Record<string, unknown>[]);
+						break;
+					}
+					case "config": {
+						const res = await api.getPlatformConfig();
+						setPlatformConfig(res.config as Record<string, unknown>);
+						break;
+					}
 				}
-				case "users": {
-					const res = await api.getAdminUsers({ page: usersPage, search: searchQuery });
-					setUsers(res.users as AdminUser[]);
-					setUsersTotal(res.total);
-					setUsersPages(res.pages);
-					break;
-				}
-				case "draws": {
-					const res = await api.getAdminCrownDraws();
-					setCrownDraws(res.draws as Record<string, unknown>[]);
-					break;
-				}
-				case "weekly": {
-					const res = await api.getAdminWeeklyDraw();
-					setWeeklyDraw(res.draw as Record<string, unknown> | null);
-					break;
-				}
-				case "games": {
-					const res = await api.getGameConfig();
-					const cfg = res.config as Record<string, unknown>;
-					if (cfg.spinCost) setSpinCost(cfg.spinCost as number);
-					if (cfg.scratchCost) setScCost(cfg.scratchCost as number);
-					if (cfg.quickPlayCost) setQpCost(cfg.quickPlayCost as number);
-					if (cfg.cashCapPlays) setCashCap(cfg.cashCapPlays as number);
-					break;
-				}
-				case "economy": {
-					const res = await api.getEconomyConfig();
-					const cfg = res.config as Record<string, unknown>;
-					setStarRate((cfg.starEarnRate as number) ?? 35);
-					const itemsRes = await api.getEconomyItems();
-					setEconomyItems(itemsRes.items as Record<string, unknown>[]);
-					break;
-				}
-				case "config": {
-					const res = await api.getPlatformConfig();
-					setPlatformConfig(res.config as Record<string, unknown>);
-					break;
-				}
+			} catch {
+				showT("Failed to load data");
 			}
-		} catch {
-			showT("Failed to load data");
-		}
-	}, [usersPage, searchQuery, showT]);
+		},
+		[usersPage, searchQuery, showT],
+	);
 
 	useEffect(() => {
 		loadTabData(tab);
@@ -225,7 +243,7 @@ export default function Admin() {
 									{
 										l: "Total users",
 										v: totalUsers.toLocaleString(),
-										s: `${((overviewStats?.recentActivity as unknown[])?.length ?? 0)} recent transactions`,
+										s: `${(overviewStats?.recentActivity as unknown[])?.length ?? 0} recent transactions`,
 										c: "tg",
 									},
 									{
@@ -259,15 +277,23 @@ export default function Admin() {
 							<div className="g2">
 								<div className="card">
 									<div className="sec">Total draws</div>
-									<div style={{ fontSize: 24, fontWeight: 700, padding: "8px 0" }}>
+									<div
+										style={{ fontSize: 24, fontWeight: 700, padding: "8px 0" }}
+									>
 										{totalDraws}
 									</div>
 								</div>
 								<div className="card">
 									<div className="sec">Stars economy</div>
 									{[
-										{ k: "Stars earned", v: `${starsIssued.toLocaleString()} ★` },
-										{ k: "Stars redeemed", v: `${starsRedeemed.toLocaleString()} ★` },
+										{
+											k: "Stars earned",
+											v: `${starsIssued.toLocaleString()} ★`,
+										},
+										{
+											k: "Stars redeemed",
+											v: `${starsRedeemed.toLocaleString()} ★`,
+										},
 									].map((r) => (
 										<div
 											key={r.k}
@@ -280,7 +306,9 @@ export default function Admin() {
 											}}
 										>
 											<span>{r.k}</span>
-											<span style={{ fontWeight: 500, color: "var(--star-dark)" }}>
+											<span
+												style={{ fontWeight: 500, color: "var(--star-dark)" }}
+											>
 												{r.v}
 											</span>
 										</div>
@@ -345,7 +373,8 @@ export default function Admin() {
 									</thead>
 									<tbody>
 										{users.map((u) => {
-											const isSuspended = (u as Record<string, unknown>).status === "suspended";
+											const isSuspended =
+												(u as unknown as Record<string, unknown>).status === "suspended";
 											return (
 												<tr
 													key={u._id}
@@ -353,7 +382,9 @@ export default function Admin() {
 												>
 													<td style={{ padding: "8px 8px" }}>
 														<div style={{ fontWeight: 500 }}>{u.name}</div>
-														<div style={{ fontSize: 10, color: "var(--text3)" }}>
+														<div
+															style={{ fontSize: 10, color: "var(--text3)" }}
+														>
 															{u.email}
 														</div>
 													</td>
@@ -376,7 +407,9 @@ export default function Admin() {
 														</span>
 													</td>
 													<td style={{ padding: "8px 8px" }}>
-														<span className={`tag ${isSuspended ? "tr" : "tg"}`}>
+														<span
+															className={`tag ${isSuspended ? "tr" : "tg"}`}
+														>
 															{isSuspended ? "Suspended" : "Active"}
 														</span>
 													</td>
@@ -472,7 +505,11 @@ export default function Admin() {
 								const d = draw as Record<string, unknown>;
 								const status = d.status as string;
 								return (
-									<div key={d._id as string} className="card" style={{ marginBottom: 12 }}>
+									<div
+										key={d._id as string}
+										className="card"
+										style={{ marginBottom: 12 }}
+									>
 										<div
 											style={{
 												display: "flex",
@@ -488,11 +525,17 @@ export default function Admin() {
 											</span>
 										</div>
 										{[
-											["Jackpot", `${(d.jackpotAmount as number)?.toLocaleString()} ETB`],
+											[
+												"Jackpot",
+												`${(d.jackpotAmount as number)?.toLocaleString()} ETB`,
+											],
 											["Entries", (d.entryCount as number)?.toLocaleString()],
-											["Ticket price", `${(d.ticketPriceETB as number)} ETB`],
-											["Star entry cost", `${(d.starEntryCost as number)} ★`],
-											["Draw date", new Date(d.drawDate as string).toLocaleDateString()],
+											["Ticket price", `${d.ticketPriceETB as number} ETB`],
+											["Star entry cost", `${d.starEntryCost as number} ★`],
+											[
+												"Draw date",
+												new Date(d.drawDate as string).toLocaleDateString(),
+											],
 											...(d.winningNumbers
 												? [
 														[
@@ -539,8 +582,12 @@ export default function Admin() {
 													onClick={async () => {
 														if (!confirm("Run this draw now?")) return;
 														try {
-															const res = await api.runCrownDraw(d._id as string);
-															showT(`Draw complete! Winners: ${(res.result as Record<string, unknown>)?.winners as number}`);
+															const res = await api.runCrownDraw(
+																d._id as string,
+															);
+															showT(
+																`Draw complete! Winners: ${(res.result as Record<string, unknown>)?.winners as number}`,
+															);
 															loadTabData("draws");
 														} catch {
 															showT("Failed to run draw");
@@ -619,7 +666,7 @@ export default function Admin() {
 									},
 									{
 										l: "Entry cost",
-										v: `${((weeklyDraw?.entryCostStars as number) ?? 0)} ★`,
+										v: `${(weeklyDraw?.entryCostStars as number) ?? 0} ★`,
 									},
 								].map((m) => (
 									<div key={m.l} className="mc">
@@ -643,14 +690,18 @@ export default function Admin() {
 									<div>
 										<div style={{ fontWeight: 500 }}>
 											{weeklyDraw
-												? `Round ${(weeklyDraw.round as number)} — ${(weeklyDraw.prizePoolETB as number).toLocaleString()} ETB Draw`
+												? `Round ${weeklyDraw.round as number} — ${(weeklyDraw.prizePoolETB as number).toLocaleString()} ETB Draw`
 												: "No active weekly draw"}
 										</div>
 										<div style={{ fontSize: 11, color: "var(--text2)" }}>
-											Stars only — {(weeklyDraw?.entryCostStars as number) ?? 800} Stars per entry — Pick 6 of 42
+											Stars only —{" "}
+											{(weeklyDraw?.entryCostStars as number) ?? 800} Stars per
+											entry — Pick 6 of 42
 										</div>
 									</div>
-									<span className={`tag ${weeklyDraw?.status === "open" ? "ta" : "tn"}`}>
+									<span
+										className={`tag ${weeklyDraw?.status === "open" ? "ta" : "tn"}`}
+									>
 										{(weeklyDraw?.status as string) ?? "N/A"}
 									</span>
 								</div>
@@ -683,25 +734,27 @@ export default function Admin() {
 												marginBottom: 8,
 											}}
 										>
-											{(localDrawResult.winningNumbers as number[])?.map((n: number) => (
-												<span
-													key={n}
-													style={{
-														width: 38,
-														height: 38,
-														borderRadius: 8,
-														background: "var(--purple)",
-														color: "#fff",
-														display: "flex",
-														alignItems: "center",
-														justifyContent: "center",
-														fontWeight: 700,
-														fontSize: 13,
-													}}
-												>
-													{String(n).padStart(2, "0")}
-												</span>
-											))}
+											{(localDrawResult.winningNumbers as number[])?.map(
+												(n: number) => (
+													<span
+														key={n}
+														style={{
+															width: 38,
+															height: 38,
+															borderRadius: 8,
+															background: "var(--purple)",
+															color: "#fff",
+															display: "flex",
+															alignItems: "center",
+															justifyContent: "center",
+															fontWeight: 700,
+															fontSize: 13,
+														}}
+													>
+														{String(n).padStart(2, "0")}
+													</span>
+												),
+											)}
 										</div>
 										<div
 											style={{
@@ -728,9 +781,15 @@ export default function Admin() {
 											}
 											if (!confirm("Run the weekly draw now?")) return;
 											try {
-												const res = await api.runWeeklyDraw(weeklyDraw.round as number);
-												setLocalDrawResult(res.result as Record<string, unknown>);
-												setWeeklyDrawResult(res.result as unknown as WeeklyDrawResult);
+												const res = await api.runWeeklyDraw(
+													weeklyDraw.round as number,
+												);
+												setLocalDrawResult(
+													res.result as Record<string, unknown>,
+												);
+												setWeeklyDrawResult(
+													res.result as unknown as WeeklyDrawResult,
+												);
 												showT("Draw complete!");
 												loadTabData("weekly");
 											} catch {
@@ -756,7 +815,10 @@ export default function Admin() {
 										New round
 									</button>
 									{localDrawResult && (
-										<button className="sbtn" onClick={() => setLocalDrawResult(null)}>
+										<button
+											className="sbtn"
+											onClick={() => setLocalDrawResult(null)}
+										>
 											Reset
 										</button>
 									)}
@@ -904,7 +966,7 @@ export default function Admin() {
 												`item-${item.key as string}`,
 											) as HTMLInputElement;
 											const cost = Number(input.value);
-											if (isNaN(cost) || cost < 0) {
+											if (Number.isNaN(cost) || cost < 0) {
 												showT("Invalid cost");
 												return;
 											}
@@ -956,7 +1018,9 @@ export default function Admin() {
 								{
 									l: "Support email",
 									k: "supportEmail",
-									v: (platformConfig.supportEmail as string) ?? "support@luckyai.et",
+									v:
+										(platformConfig.supportEmail as string) ??
+										"support@luckyai.et",
 								},
 								{
 									l: "Withdrawal min (ETB)",
@@ -971,18 +1035,15 @@ export default function Admin() {
 							].map((r) => (
 								<div key={r.l} className="frow">
 									<label className="flbl">{r.l}</label>
-									<input
-										type="text"
-										defaultValue={r.v}
-										id={`cfg-${r.k}`}
-									/>
+									<input type="text" defaultValue={r.v} id={`cfg-${r.k}`} />
 								</div>
 							))}
 							<button
 								className="abtn"
 								onClick={async () => {
 									const getVal = (k: string) =>
-										(document.getElementById(`cfg-${k}`) as HTMLInputElement).value;
+										(document.getElementById(`cfg-${k}`) as HTMLInputElement)
+											.value;
 									const updates: Record<string, unknown> = {
 										platformName: getVal("platformName"),
 										supportEmail: getVal("supportEmail"),

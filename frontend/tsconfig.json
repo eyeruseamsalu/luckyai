@@ -7,7 +7,10 @@
 		"lib": ["esnext", "dom", "dom.iterable"],
 		"resolveJsonModule": true,
 		"allowImportingTsExtensions": true,
+		"target": "esnext",
+		"module": "preserve",
 		"moduleResolution": "bundler",
+		"downlevelIteration": true,
 		"types": ["node", "vite/client"],
 		"paths": {
 			"@/*": ["./src/*"]

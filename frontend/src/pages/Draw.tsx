@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { enterCrownDraw, getCrownEntries, suggestNumbers } from "../lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
-import { enterCrownDraw, suggestNumbers, getCrownEntries } from "../lib/api";
-import { toast } from "sonner";
 
 const PICK_COUNT = 6;
 const POOL = Array.from({ length: 42 }, (_, i) => i + 1);
@@ -63,16 +63,14 @@ const PAYOUT_TIERS = [
 ];
 
 export default function Draw() {
-	const {
-		state,
-		lang,
-		refreshUser,
-	} = useStore();
+	const { state, lang, refreshUser } = useStore();
 	const [picks, setPicks] = useState<number[]>([]);
 	const [entryType, setEntryType] = useState("stars");
 	const [suggestUsed, setSuggestUsed] = useState(0);
 	const [suggestedNums, setSuggestedNums] = useState<number[]>([]);
-	const [entries, setEntries] = useState<Array<{ numbers: number[]; entryType: string; createdAt: Date }>>([]);
+	const [entries, setEntries] = useState<
+		Array<{ numbers: number[]; entryType: string; createdAt: string }>
+	>([]);
 
 	const toggle = (n: number) => {
 		setPicks((p) =>
@@ -95,7 +93,11 @@ export default function Draw() {
 	const handleSuggest = async () => {
 		if (suggestUsed >= 3) return;
 		try {
-			const res = await suggestNumbers() as { success: true; numbers: number[]; cost: number };
+			const res = (await suggestNumbers()) as {
+				success: true;
+				numbers: number[];
+				cost: number;
+			};
 			setSuggestedNums(res.numbers);
 			setSuggestUsed((n) => n + 1);
 			if (res.cost > 0) {
@@ -104,7 +106,9 @@ export default function Draw() {
 				toast.info("Suggested numbers shown below — free. Click any to add.");
 			}
 		} catch (e) {
-			toast.error((e as { message?: string })?.message || "Failed to get suggestion");
+			toast.error(
+				(e as { message?: string })?.message || "Failed to get suggestion",
+			);
 		}
 	};
 
@@ -114,7 +118,7 @@ export default function Draw() {
 			return;
 		}
 		try {
-			const res = await enterCrownDraw({ numbers: picks, entryType }) as {
+			const res = (await enterCrownDraw({ numbers: picks, entryType })) as unknown as {
 				success: true;
 				entryId: string;
 				tickets: number;
@@ -124,7 +128,7 @@ export default function Draw() {
 			toast.success(`Entry submitted! You have ${res.tickets} tickets.`);
 			refreshUser();
 			setEntries((prev) => [
-				{ numbers: picks, entryType, createdAt: new Date() },
+				{ numbers: picks, entryType, createdAt: new Date().toISOString() },
 				...prev.slice(0, 9),
 			]);
 			setPicks([]);

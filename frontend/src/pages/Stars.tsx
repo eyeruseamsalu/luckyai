@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { activateBoost, getActiveBoosts, type BoostInfo } from "@/lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
-import { activateBoost, getActiveBoosts } from "@/lib/api";
-import { toast } from "sonner";
 
 const CROWN_STAR_COST = 1500;
 const WEEKLY_STAR_COST = 800;
@@ -33,9 +33,7 @@ export default function Stars() {
 		setTimeout(() => setLocalToast(null), 3500);
 	};
 
-	const [activeBoosts, setActiveBoosts] = useState<
-		{ type: string; label: string; icon: string; expiresAfter: number }[]
-	>([]);
+	const [activeBoosts, setActiveBoosts] = useState<BoostInfo[]>([]);
 	const [activating, setActivating] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -344,7 +342,10 @@ export default function Stars() {
 				</div>
 
 				{localToast && (
-					<div className={`toast ${localToast.cls}`} style={{ marginBottom: 13 }}>
+					<div
+						className={`toast ${localToast.cls}`}
+						style={{ marginBottom: 13 }}
+					>
 						{localToast.msg}
 					</div>
 				)}
@@ -711,12 +712,7 @@ export default function Stars() {
 										disabled={isActive || isLoading}
 										onClick={() => handleActivateBoost(boost.type, boost.cost)}
 									>
-										{isLoading
-											? "..."
-
-											: isActive
-												? "Active"
-												: `${boost.cost}★`}
+										{isLoading ? "..." : isActive ? "Active" : `${boost.cost}★`}
 									</button>
 								</div>
 							);

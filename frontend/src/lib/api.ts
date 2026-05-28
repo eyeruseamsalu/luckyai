@@ -341,8 +341,10 @@ export function purchaseItem(itemKey: string) {
 
 export interface BoostInfo {
 	type: string;
-	expiresAt: string;
-	multiplier: number;
+	label: string;
+	icon: string;
+	expiresAfter: number;
+	activatedAt?: string;
 }
 
 export function activateBoost(type: string) {
@@ -422,13 +424,10 @@ export function getAdminUsers(params?: {
 }
 
 export function updateUser(userId: string, data: object) {
-	return request<{ success: true; user: AdminUser }>(
-		`/admin/users/${userId}`,
-		{
-			method: "PUT",
-			body: JSON.stringify(data),
-		},
-	);
+	return request<{ success: true; user: AdminUser }>(`/admin/users/${userId}`, {
+		method: "PUT",
+		body: JSON.stringify(data),
+	});
 }
 
 export function suspendUser(userId: string) {
@@ -476,12 +475,9 @@ export function runCrownDraw(id: string) {
 }
 
 export function cancelCrownDraw(id: string) {
-	return request<{ success: true }>(
-		`/admin/draws/crown/${id}/cancel`,
-		{
-			method: "POST",
-		},
-	);
+	return request<{ success: true }>(`/admin/draws/crown/${id}/cancel`, {
+		method: "POST",
+	});
 }
 
 // Admin — Weekly Draws

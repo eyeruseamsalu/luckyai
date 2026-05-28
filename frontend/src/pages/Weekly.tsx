@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
+import { enterWeeklyDraw, getWeeklyCurrent, getWeeklyResult } from "../lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
-import { enterWeeklyDraw, getWeeklyCurrent, getWeeklyResult } from "../lib/api";
 import type { WeeklyDrawResult } from "../types";
-import { toast } from "sonner";
 
 const PICK_COUNT = 6;
 const ENTRY_STARS = 800;
@@ -101,7 +100,6 @@ export default function Weekly() {
 			addTicket();
 			setPicks([]);
 			showT(t(lang, "entryConfirmed"), "ts");
-			toast.success("Entry submitted successfully!");
 		} catch (err) {
 			showT(
 				err instanceof Error ? err.message : "Failed to submit entry",
@@ -115,7 +113,7 @@ export default function Weekly() {
 		getWeeklyResult()
 			.then((res) => {
 				if (res.result) {
-					setWeeklyDrawResult(res.result as WeeklyDrawResult);
+					setWeeklyDrawResult(res.result as unknown as WeeklyDrawResult);
 				}
 			})
 			.catch(() => {});

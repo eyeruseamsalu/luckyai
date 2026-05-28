@@ -3,9 +3,18 @@ import { getTickets } from "../lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
 
+interface TicketDisplay {
+	id: string;
+	draw: string;
+	picks: number[];
+	bought: string;
+	prize: string;
+	type: string;
+}
+
 export default function Tickets() {
 	const { state, lang, goPage } = useStore();
-	const [tickets, setTickets] = useState<Array<Record<string, unknown>>>([]);
+	const [tickets, setTickets] = useState<TicketDisplay[]>([]);
 	const allTickets = state.tickets;
 
 	useEffect(() => {
@@ -16,20 +25,16 @@ export default function Tickets() {
 				};
 				if (data?.tickets) {
 					setTickets(
-						data.tickets.map((t: Record<string, unknown>) => ({
-							id: t._id,
+						data.tickets.map((t) => ({
+							id: String(t._id ?? ""),
 							draw:
-								t.drawType === "crown"
-									? "Crown Draw"
-									: "Weekly Draw",
+								t.drawType === "crown" ? "Crown Draw" : "Weekly Draw",
 							picks: [] as number[],
 							bought: t.purchaseDate
-								? new Date(
-										t.purchaseDate as string,
-									).toLocaleDateString()
+								? new Date(String(t.purchaseDate)).toLocaleDateString()
 								: "",
 							prize: "—",
-							type: t.entryType,
+							type: String(t.entryType ?? ""),
 						})),
 					);
 				}
