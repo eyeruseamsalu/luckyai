@@ -1,4 +1,6 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast as sonnerToast } from "sonner";
+import { getGameHistory, playGame } from "@/lib/api";
 import BonusMode from "../components/BonusMode";
 import { useStore } from "../store";
 
@@ -101,30 +103,18 @@ const SEGMENTS = [
 	},
 ];
 
-const TOTAL_PROB = SEGMENTS.reduce((a, s) => a + s.prob, 0);
 const COST_OPTIONS = [5, 15, 30, 50];
 const STAR_EARN_ON_LOSS = 30;
-
-function pickSegment() {
-	let r = Math.random() * TOTAL_PROB;
-	for (const s of SEGMENTS) {
-		r -= s.prob;
-		if (r <= 0) return s;
-	}
-	return SEGMENTS[0];
-}
 
 export default function Spin() {
 	const {
 		state,
-		deductBalance,
 		addBalance,
 		addStars,
 		addTransaction,
 		addNotification,
 		addTicket,
 		setPremium,
-		recordPlay,
 		goPage,
 	} = useStore();
 
@@ -136,9 +126,18 @@ export default function Spin() {
 	const [totalSpins, setTotalSpins] = useState(0);
 	const [streak, setStreak] = useState(0);
 	const [streakBonus, setStreakBonus] = useState(false);
+	const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const animRef = useRef<number>(0);
 	const angleRef = useRef(0);
+
+	useEffect(() => {
+		getGameHistory("spin")
+			.then((res) => {
+				if (res?.rounds) setHistory(res.rounds);
+			})
+			.catch(() => {});
+	}, []);
 
 	const showT = (msg: string, cls: string) => {
 		setToast({ msg, cls });
@@ -196,88 +195,130 @@ export default function Spin() {
 		[drawWheel],
 	);
 
-	const spin = () => {
+	const spin = async () => {
 		if (spinning) return;
 		if (state.balance < cost) {
 			showT("Insufficient balance. Top up to continue.", "tx");
 			return;
 		}
-		if (!deductBalance(cost)) return;
-		addTransaction(`Spin (${cost} ETB)`, -cost, "out");
-		recordPlay();
 		setSpinning(true);
 		setResult(null);
 
-		const seg = pickSegment();
-		const segIdx = SEGMENTS.indexOf(seg);
-		const step = 360 / SEGMENTS.length;
-		const targetDeg = 360 * 7 + (360 - segIdx * step) - step / 2;
-		const startAngle = angleRef.current;
-		const start = Date.now();
-		const dur = 4200 + Math.random() * 800;
+		try {
+			const res = (await playGame("spin", { cost })) as Record<
+				string,
+				unknown
+			>;
+			const {
+				segment,
+				wonCash,
+				wonStars,
+				wonTicket,
+				wonPremium,
+				cashCapHit: ccHit,
+				streak: newStreak,
+				streakBonus: newStreakBonus,
+			} = res as {
+				segment: { label: string; type: string; value: number };
+				wonCash: number;
+				wonStars: number;
+				wonTicket: number;
+				wonPremium: number;
+				cashCapHit: boolean;
+				streak: number;
+				streakBonus: boolean;
+			};
 
-		const animate = () => {
-			const t = Math.min(1, (Date.now() - start) / dur);
-			const ease = 1 - (1 - t) ** 4;
-			const current = startAngle + targetDeg * ease;
-			const rad = ((current % 360) * Math.PI) / 180;
-			drawWheel(rad);
+			if (wonCash) addBalance(wonCash);
+			if (wonStars) addStars(wonStars);
+			if (wonTicket) addTicket();
+			if (wonPremium) setPremium();
 
-			if (t < 1) {
-				animRef.current = requestAnimationFrame(animate);
-			} else {
-				angleRef.current = current % 360;
-				setAngle(current % 360);
-				setSpinning(false);
-				setResult(seg);
-				setTotalSpins((n) => n + 1);
+			setStreak(newStreak);
+			setStreakBonus(newStreakBonus);
+			setHistory((prev) =>
+				[
+					{ ...segment, wonCash, wonStars, createdAt: new Date() },
+					...prev,
+				].slice(0, 10),
+			);
 
-				const mult = state.activeBoosts.find((b) => b.type === "multiplier")
-					? 1.2
-					: 1;
+			const dispSeg =
+				SEGMENTS.find(
+					(s) =>
+						s.label === segment.label ||
+						(s.type === segment.type && s.val === segment.value),
+				) ||
+				SEGMENTS.find((s) => s.type === segment.type) ||
+				SEGMENTS[0];
 
-				if (seg.type === "cash" && !state.cashCapHit) {
-					const won = Math.round(seg.val * mult * (streakBonus ? 1.1 : 1));
-					addBalance(won);
-					addTransaction(`Spin win — ${won} ETB`, won, "in");
-					addNotification("ti-coin", "tg", `You won ${won} ETB from the spin`);
-					showT(`${won} ETB added to your balance`, "ts");
-					setStreak((s) => s + 1);
-					if (streak + 1 >= 3) {
-						setStreakBonus(true);
-					}
-				} else if (seg.type === "stars" || state.cashCapHit) {
-					const stars = seg.type === "stars" ? seg.val : STAR_EARN_ON_LOSS;
-					addStars(stars);
-					addTransaction(`Spin — Stars earned`, stars, "star");
-					showT(`${stars} Stars earned`, "tstar");
-					setStreak(0);
-					setStreakBonus(false);
-				} else if (seg.type === "ticket") {
-					addTicket();
-					addNotification(
-						"ti-ticket",
-						"tg",
-						"Free Crown Draw ticket from spin",
-					);
-					showT("Free Crown Draw ticket added", "ts");
-					setStreak((s) => s + 1);
-				} else if (seg.type === "premium") {
-					setPremium();
-					addNotification("ti-star", "ta", "Premium day unlocked from spin");
-					showT("Premium access for 24 hours", "ts");
-					setStreak((s) => s + 1);
+			const segIdx = SEGMENTS.indexOf(dispSeg);
+			const step = 360 / SEGMENTS.length;
+			const targetDeg = 360 * 7 + (360 - segIdx * step) - step / 2;
+			const startAngle = angleRef.current;
+			const startTime = Date.now();
+			const duration = 4200 + Math.random() * 800;
+
+			const animate = () => {
+				const t = Math.min(1, (Date.now() - startTime) / duration);
+				const ease = 1 - (1 - t) ** 4;
+				const current = startAngle + targetDeg * ease;
+				const rad = ((current % 360) * Math.PI) / 180;
+				drawWheel(rad);
+
+				if (t < 1) {
+					animRef.current = requestAnimationFrame(animate);
 				} else {
-					const stars = Math.round(STAR_EARN_ON_LOSS * mult);
-					addStars(stars);
-					addTransaction("Spin — Stars", stars, "star");
-					showT(`${stars} Stars earned`, "tstar");
-					setStreak(0);
-					setStreakBonus(false);
+					angleRef.current = current % 360;
+					setAngle(current % 360);
+					setSpinning(false);
+					setResult(dispSeg);
+					setTotalSpins((n) => n + 1);
+
+					if (dispSeg.type === "cash" && !ccHit) {
+						addTransaction(
+							`Spin win — ${wonCash} ETB`,
+							wonCash,
+							"in",
+						);
+						addNotification(
+							"ti-coin",
+							"tg",
+							`You won ${wonCash} ETB from the spin`,
+						);
+						showT(`${wonCash} ETB added to your balance`, "ts");
+					} else if (dispSeg.type === "stars" || ccHit) {
+						addTransaction(
+							`Spin — Stars earned`,
+							wonStars,
+							"star",
+						);
+						showT(`${wonStars} Stars earned`, "tstar");
+					} else if (dispSeg.type === "ticket") {
+						addNotification(
+							"ti-ticket",
+							"tg",
+							"Free Crown Draw ticket from spin",
+						);
+						showT("Free Crown Draw ticket added", "ts");
+					} else if (dispSeg.type === "premium") {
+						addNotification(
+							"ti-star",
+							"ta",
+							"Premium day unlocked from spin",
+						);
+						showT("Premium access for 24 hours", "ts");
+					} else {
+						addTransaction("Spin — Stars", wonStars, "star");
+						showT(`${wonStars} Stars earned`, "tstar");
+					}
 				}
-			}
-		};
-		animate();
+			};
+			animate();
+		} catch (e) {
+			sonnerToast.error("Failed to play spin");
+			setSpinning(false);
+		}
 	};
 
 	return (

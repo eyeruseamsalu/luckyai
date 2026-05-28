@@ -276,6 +276,19 @@ export function suggestNumbers() {
 	});
 }
 
+export function getCrownEntries() {
+	return request<{
+		success: true;
+		entries: Array<{
+			_id: string;
+			numbers: number[];
+			entryType: string;
+			drawId: string;
+			createdAt: string;
+		}>;
+	}>("/draws/crown/entries");
+}
+
 export function enterWeeklyDraw(data: { numbers: number[] }) {
 	return request<CrownDrawEntryResponse>("/draws/weekly/enter", {
 		method: "POST",

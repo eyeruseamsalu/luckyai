@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import { t } from "../translations";
+import { enterCrownDraw, suggestNumbers, getCrownEntries } from "../lib/api";
+import { toast } from "sonner";
 
 const PICK_COUNT = 6;
 const POOL = Array.from({ length: 42 }, (_, i) => i + 1);
@@ -64,24 +66,13 @@ export default function Draw() {
 	const {
 		state,
 		lang,
-		deductBalance,
-		spendStars,
-		addTransaction,
-		addNotification,
-		addTicket,
-		recordPlay,
+		refreshUser,
 	} = useStore();
 	const [picks, setPicks] = useState<number[]>([]);
 	const [entryType, setEntryType] = useState("stars");
 	const [suggestUsed, setSuggestUsed] = useState(0);
 	const [suggestedNums, setSuggestedNums] = useState<number[]>([]);
-	const [entries, setEntries] = useState(0);
-	const [toast, setToast] = useState<{ msg: string; cls: string } | null>(null);
-
-	const showT = (msg: string, cls: string) => {
-		setToast({ msg, cls });
-		setTimeout(() => setToast(null), 3000);
-	};
+	const [entries, setEntries] = useState<Array<{ numbers: number[]; entryType: string; createdAt: Date }>>([]);
 
 	const toggle = (n: number) => {
 		setPicks((p) =>
@@ -101,58 +92,57 @@ export default function Draw() {
 
 	const clearPicks = () => setPicks([]);
 
-	const useSuggestion = () => {
+	const handleSuggest = async () => {
 		if (suggestUsed >= 3) return;
-		const cost = suggestUsed === 0 ? 0 : 1;
-		if (cost > 0 && state.balance < 1) {
-			showT("Insufficient balance for suggestion", "tx");
-			return;
+		try {
+			const res = await suggestNumbers() as { success: true; numbers: number[]; cost: number };
+			setSuggestedNums(res.numbers);
+			setSuggestUsed((n) => n + 1);
+			if (res.cost > 0) {
+				toast.info(`Suggestion cost: ${res.cost} ETB`);
+			} else {
+				toast.info("Suggested numbers shown below — free. Click any to add.");
+			}
+		} catch (e) {
+			toast.error((e as { message?: string })?.message || "Failed to get suggestion");
 		}
-		if (cost > 0) deductBalance(1);
-		const s = new Set<number>();
-		while (s.size < PICK_COUNT) s.add(Math.floor(Math.random() * 42) + 1);
-		setSuggestedNums([...s].sort((a, b) => a - b));
-		setSuggestUsed((n) => n + 1);
-		showT(
-			cost > 0
-				? "Suggested numbers shown below — 1 ETB charged. Click any to add."
-				: "Suggested numbers shown below — free. Click any to add.",
-			"ts",
-		);
 	};
 
-	const confirm = () => {
-		if (picks.length < PICK_COUNT) {
-			showT(`Pick ${PICK_COUNT} numbers to confirm`, "tx");
+	const handleSubmit = async () => {
+		if (picks.length !== PICK_COUNT) {
+			toast.error("Select 6 numbers");
 			return;
 		}
-		const opt = ENTRY_OPTIONS.find((o) => o.id === entryType)!;
-		if (opt.cashCost > 0 && state.balance < opt.cashCost) {
-			showT("Insufficient balance", "tx");
-			return;
+		try {
+			const res = await enterCrownDraw({ numbers: picks, entryType }) as {
+				success: true;
+				entryId: string;
+				tickets: number;
+				newBalance: number;
+				newStarsBalance: number;
+			};
+			toast.success(`Entry submitted! You have ${res.tickets} tickets.`);
+			refreshUser();
+			setEntries((prev) => [
+				{ numbers: picks, entryType, createdAt: new Date() },
+				...prev.slice(0, 9),
+			]);
+			setPicks([]);
+			setSuggestUsed(0);
+		} catch (e) {
+			toast.error(
+				(e as { message?: string })?.message || "Failed to enter draw",
+			);
 		}
-		if (opt.starsCost > 0 && state.starsBalance < opt.starsCost) {
-			showT(`You need ${opt.starsCost} Stars — earn more by playing`, "tx");
-			return;
-		}
-		if (opt.cashCost > 0) deductBalance(opt.cashCost);
-		if (opt.starsCost > 0) spendStars(opt.starsCost);
-		if (opt.cashCost > 0)
-			addTransaction(`Crown Draw — ${opt.sub}`, -opt.cashCost, "out");
-		if (opt.starsCost > 0)
-			addTransaction(`Crown Draw — Stars used`, -opt.starsCost, "star");
-		addTicket();
-		addNotification(
-			"ti-circle-check",
-			"tg",
-			`Crown Draw entry confirmed — June 15`,
-		);
-		recordPlay();
-		setEntries((n) => n + 1);
-		setPicks([]);
-		setSuggestUsed(0);
-		showT(t(lang, "entryConfirmed"), "ts");
 	};
+
+	useEffect(() => {
+		getCrownEntries()
+			.then((res) => {
+				if (res?.entries) setEntries(res.entries);
+			})
+			.catch(() => {});
+	}, []);
 
 	const selected = ENTRY_OPTIONS.find((o) => o.id === entryType)!;
 
@@ -317,12 +307,6 @@ export default function Draw() {
 						</div>
 					</div>
 
-					{toast && (
-						<div className={`toast ${toast.cls}`} style={{ marginBottom: 10 }}>
-							{toast.msg}
-						</div>
-					)}
-
 					{/* Action buttons */}
 					<div style={{ display: "flex", gap: 7 }}>
 						<button
@@ -348,7 +332,7 @@ export default function Draw() {
 								alignItems: "center",
 								gap: 4,
 							}}
-							onClick={useSuggestion}
+							onClick={handleSuggest}
 							disabled={suggestUsed >= 3}
 						>
 							<i className="ti ti-sparkles" style={{ fontSize: 12 }} />{" "}
@@ -357,7 +341,7 @@ export default function Draw() {
 						<button
 							className={picks.length === PICK_COUNT ? "abtn" : "sbtn"}
 							style={{ flex: 1, fontSize: 11, padding: "7px 12px" }}
-							onClick={confirm}
+							onClick={handleSubmit}
 							disabled={picks.length < PICK_COUNT}
 						>
 							{t(lang, "confirm")} — {selected.sub}
@@ -452,7 +436,7 @@ export default function Draw() {
 							{ k: t(lang, "jackpot"), v: "500,000 ETB", bold: true },
 							{ k: "Ticket price", v: "500 ETB / 1,500 Stars" },
 							{ k: "Draw date", v: "June 15, 2025" },
-							{ k: "Your entries", v: String(state.tickets + entries) },
+							{ k: "Your entries", v: String(state.tickets + entries.length) },
 						].map((r) => (
 							<div
 								key={r.k}
