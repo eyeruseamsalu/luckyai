@@ -253,7 +253,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 				dailyClaimed: true,
 				streak,
 				transactions: [
-					{ type: "in", desc: "Daily reward", date: "Just now", amt: totalCash },
+					{
+						type: "in",
+						desc: "Daily reward",
+						date: "Just now",
+						amt: totalCash,
+					},
 					...s.transactions,
 				],
 				notifications: [

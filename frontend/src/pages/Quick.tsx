@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast as sonnerToast } from "sonner";
-import { playGame, getGameHistory } from "@/lib/api";
+import { getGameHistory, playGame } from "@/lib/api";
 import { useStore } from "../store";
 import { t } from "../translations";
 
@@ -34,14 +34,8 @@ interface RecentRound {
 }
 
 export default function Quick() {
-	const {
-		state,
-		lang,
-		deductBalance,
-		addBalance,
-		addStars,
-		addNotification,
-	} = useStore();
+	const { state, lang, deductBalance, addBalance, addStars, addNotification } =
+		useStore();
 	const [picks, setPicks] = useState<number[]>([]);
 	const [costIdx, setCostIdx] = useState(0);
 	const [drawn, setDrawn] = useState<number[]>([]);
@@ -70,11 +64,13 @@ export default function Quick() {
 			.then((res) => {
 				if (res?.rounds) {
 					setRecentRounds(
-						res.rounds.map((r: { drawn: number[]; matches: number; result: string }) => ({
-							draw: r.drawn,
-							matches: r.matches,
-							result: r.result,
-						})),
+						res.rounds.map(
+							(r: { drawn: number[]; matches: number; result: string }) => ({
+								draw: r.drawn,
+								matches: r.matches,
+								result: r.result,
+							}),
+						),
 					);
 				}
 			})

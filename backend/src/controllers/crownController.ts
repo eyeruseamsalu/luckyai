@@ -7,11 +7,12 @@ import { Ticket } from "../models/Ticket.js";
 import { Transaction } from "../models/Transaction.js";
 import { User } from "../models/User.js";
 
-const ENTRY_COST_MAP: Record<string, { starsCost: number; cashCost: number }> = {
-	stars: { starsCost: 1500, cashCost: 0 },
-	cash: { starsCost: 0, cashCost: 500 },
-	hybrid: { starsCost: 750, cashCost: 250 },
-};
+const ENTRY_COST_MAP: Record<string, { starsCost: number; cashCost: number }> =
+	{
+		stars: { starsCost: 1500, cashCost: 0 },
+		cash: { starsCost: 0, cashCost: 500 },
+		hybrid: { starsCost: 750, cashCost: 250 },
+	};
 
 const PICK_COUNT = 6;
 const MAX_NUM = 42;
@@ -47,17 +48,16 @@ export async function enter(
 			new Set(numbers).size !== PICK_COUNT
 		) {
 			next(
-				new ApiError(
-					400,
-					"Numbers must be 6 unique integers between 1 and 42",
-				),
+				new ApiError(400, "Numbers must be 6 unique integers between 1 and 42"),
 			);
 			return;
 		}
 
 		// Validate entryType
 		if (typeof entryType !== "string" || !(entryType in ENTRY_COST_MAP)) {
-			next(new ApiError(400, "Entry type must be 'stars', 'cash', or 'hybrid'"));
+			next(
+				new ApiError(400, "Entry type must be 'stars', 'cash', or 'hybrid'"),
+			);
 			return;
 		}
 

@@ -31,10 +31,12 @@ async function ensureGameConfigSeeded(): Promise<void> {
 async function ensurePlatformConfigSeeded(): Promise<void> {
 	const count = await PlatformConfig.countDocuments();
 	if (count === 0) {
-		const docs = Object.entries(PLATFORM_CONFIG_DEFAULTS).map(([key, value]) => ({
-			key,
-			value,
-		}));
+		const docs = Object.entries(PLATFORM_CONFIG_DEFAULTS).map(
+			([key, value]) => ({
+				key,
+				value,
+			}),
+		);
 		await PlatformConfig.insertMany(docs);
 	}
 }

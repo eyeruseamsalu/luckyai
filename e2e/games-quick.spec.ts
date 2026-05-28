@@ -81,10 +81,7 @@ test.describe("Quick Play - API", () => {
 	test("Happy path: play with valid picks and cost returns correct response shape", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-happy@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-happy@e2e.test");
 		await depositFunds(request, token, 100);
 
 		const { status, body } = await quickPlay(request, token, [1, 2, 3], 2);
@@ -108,19 +105,11 @@ test.describe("Quick Play - API", () => {
 	});
 
 	test("All cost tiers (2, 5, 10) succeed", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-costs@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-costs@e2e.test");
 		await depositFunds(request, token, 200);
 
 		for (const cost of [2, 5, 10]) {
-			const { status, body } = await quickPlay(
-				request,
-				token,
-				[1, 2, 3],
-				cost,
-			);
+			const { status, body } = await quickPlay(request, token, [1, 2, 3], cost);
 			expect(status).toBe(200);
 			expect(body.success).toBe(true);
 			expect(body.drawn).toHaveLength(3);
@@ -130,10 +119,7 @@ test.describe("Quick Play - API", () => {
 	test("3-match win: correct prize cash and balance update", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-3match@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-3match@e2e.test");
 		await depositFunds(request, token, 1000);
 
 		let found3Match = false;
@@ -163,10 +149,7 @@ test.describe("Quick Play - API", () => {
 	});
 
 	test("2-match win: prize uses 3x multiplier", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-2match@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-2match@e2e.test");
 		await depositFunds(request, token, 1000);
 
 		let found2Match = false;
@@ -305,12 +288,7 @@ test.describe("Quick Play - API", () => {
 
 		let foundCashWin = false;
 		for (let i = 0; i < 500; i++) {
-			const { body } = await quickPlay(
-				request,
-				token,
-				[1, 2, 3],
-				10,
-			);
+			const { body } = await quickPlay(request, token, [1, 2, 3], 10);
 
 			if (body.matches === 3) {
 				foundCashWin = true;
@@ -337,10 +315,7 @@ test.describe("Quick Play - API", () => {
 	test("History endpoint returns rounds after multiple plays", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-history@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-history@e2e.test");
 		await depositFunds(request, token, 100);
 
 		const roundsPlayed = 3;
@@ -348,10 +323,7 @@ test.describe("Quick Play - API", () => {
 			await quickPlay(request, token, [1, 2, 3], 2);
 		}
 
-		const res = await request.get(
-			"/api/games/quick/history",
-			auth(token),
-		);
+		const res = await request.get("/api/games/quick/history", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -380,10 +352,7 @@ test.describe("Quick Play - API", () => {
 			"quick-history-empty@e2e.test",
 		);
 
-		const res = await request.get(
-			"/api/games/quick/history",
-			auth(token),
-		);
+		const res = await request.get("/api/games/quick/history", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -414,10 +383,7 @@ test.describe("Quick Play - API", () => {
 	test("Cash cap: 8th play triggers cashCapHit and converts cash to stars", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-cashcap@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-cashcap@e2e.test");
 		await depositFunds(request, token, 5000);
 
 		let lastBody: Record<string, unknown> | null = null;
@@ -439,9 +405,7 @@ test.describe("Quick Play - API", () => {
 		expect(ninth.body.cashCapHit).toBe(true);
 	});
 
-	test("Cash cap resets next day (playsToday counter)", async ({
-		request,
-	}) => {
+	test("Cash cap resets next day (playsToday counter)", async ({ request }) => {
 		const token = await registerAndGetToken(
 			request,
 			"quick-cashcap-reset@e2e.test",
@@ -470,10 +434,7 @@ test.describe("Quick Play - API", () => {
 	});
 
 	test("1-match win awards stars only", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-1match@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-1match@e2e.test");
 		await depositFunds(request, token, 1000);
 
 		let found1Match = false;
@@ -497,10 +458,7 @@ test.describe("Quick Play - API", () => {
 	});
 
 	test("0-match awards 2 consolation stars", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"quick-0match@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "quick-0match@e2e.test");
 		await depositFunds(request, token, 1000);
 
 		let found0Match = false;
@@ -599,22 +557,12 @@ test.describe("Quick Play - Browser", () => {
 
 		const toastText = await page.locator(".toast").textContent();
 		expect(toastText).toBeTruthy();
-		const validOutcomes = [
-			"matched",
-			"Stars earned",
-			"No match",
-			"Stars",
-		];
-		const matchesOutcome = validOutcomes.some((o) =>
-			toastText!.includes(o),
-		);
+		const validOutcomes = ["matched", "Stars earned", "No match", "Stars"];
+		const matchesOutcome = validOutcomes.some((o) => toastText!.includes(o));
 		expect(matchesOutcome).toBe(true);
 	});
 
-	test("Insufficient balance shows error toast", async ({
-		page,
-		request,
-	}) => {
+	test("Insufficient balance shows error toast", async ({ page, request }) => {
 		const token = await registerAndGetToken(
 			request,
 			"quick-ui-insufficient@e2e.test",
@@ -668,9 +616,9 @@ test.describe("Quick Play - Browser", () => {
 		await page.getByRole("button", { name: /enter/i }).click();
 		await expect(page.locator(".toast")).toBeVisible({ timeout: 5_000 });
 
-		await expect(
-			page.getByRole("button", { name: /again/i }),
-		).toBeVisible({ timeout: 3_000 });
+		await expect(page.getByRole("button", { name: /again/i })).toBeVisible({
+			timeout: 3_000,
+		});
 
 		await page.getByRole("button", { name: /again/i }).click();
 
@@ -749,9 +697,9 @@ test.describe("Quick Play - Browser", () => {
 
 		await page.getByRole("button", { name: /enter/i }).click();
 
-		await expect(
-			page.getByRole("button", { name: /drawing/i }),
-		).toBeVisible({ timeout: 1_000 });
+		await expect(page.getByRole("button", { name: /drawing/i })).toBeVisible({
+			timeout: 1_000,
+		});
 
 		const drawnBalls = page.locator(".qball");
 		await expect(drawnBalls).toHaveCount(3, { timeout: 5_000 });

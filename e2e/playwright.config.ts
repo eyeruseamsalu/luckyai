@@ -8,11 +8,13 @@ export default defineConfig({
 		baseURL: "http://localhost:5173",
 		headless: true,
 	},
+	// Servers are started by e2e/run-with-memory-db.mjs which also
+	// sets MONGODB_URI to an in-memory MongoDB for full isolation.
 	webServer: {
-		command: "npm run dev",
+		command:
+			'bash -c "echo Waiting for pre-started dev server on http://localhost:5173..."',
 		url: "http://localhost:5173",
-		reuseExistingServer: !process.env.CI,
-		timeout: 30000,
+		reuseExistingServer: true,
+		timeout: 60000,
 	},
-	globalSetup: require.resolve("./global-setup"),
 });

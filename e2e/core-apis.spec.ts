@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import mongoose from "mongoose";
+import { registerUser } from "./helpers/auth";
 import { clearDatabase } from "./helpers/db";
-import { loginUser, registerUser } from "./helpers/auth";
 
 const auth = (token: string) => ({
 	headers: { Authorization: `Bearer ${token}` },
@@ -44,10 +44,7 @@ test.describe("Wallet API", () => {
 	test("deposit 100 ETB increases balance and creates a transaction", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"wallet-deposit@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "wallet-deposit@e2e.test");
 
 		const res = await request.post("/api/wallet/deposit", {
 			data: { amount: 100 },
@@ -154,10 +151,7 @@ test.describe("Daily Rewards", () => {
 	test("claim daily reward returns cash, stars, and sets streak", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"daily-first@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "daily-first@e2e.test");
 
 		const res = await request.post("/api/daily/claim", {
 			...auth(token),
@@ -176,16 +170,15 @@ test.describe("Daily Rewards", () => {
 
 		const walletRes = await request.get("/api/wallet", auth(token));
 		const wallet = await walletRes.json();
-		expect(wallet.balance).toBe(body.reward.cash + (body.reward.bonusCash ?? 0));
+		expect(wallet.balance).toBe(
+			body.reward.cash + (body.reward.bonusCash ?? 0),
+		);
 	});
 
 	test("second daily claim on the same day returns 409", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"daily-twice@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "daily-twice@e2e.test");
 
 		const first = await request.post("/api/daily/claim", auth(token));
 		expect(first.status()).toBe(200);
@@ -219,19 +212,13 @@ test.describe("Profile", () => {
 	test("update profile name returns updated user via GET /me", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"profile-update@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "profile-update@e2e.test");
 
 		const newName = "Updated Name";
-		const res = await request.put(
-			"/api/auth/profile",
-			{
-				data: { name: newName },
-				...auth(token),
-			},
-		);
+		const res = await request.put("/api/auth/profile", {
+			data: { name: newName },
+			...auth(token),
+		});
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -253,13 +240,10 @@ test.describe("Profile", () => {
 			"profile-empty-name@e2e.test",
 		);
 
-		const res = await request.put(
-			"/api/auth/profile",
-			{
-				data: { name: "" },
-				...auth(token),
-			},
-		);
+		const res = await request.put("/api/auth/profile", {
+			data: { name: "" },
+			...auth(token),
+		});
 		expect(res.status()).toBe(400);
 
 		const body = await res.json();

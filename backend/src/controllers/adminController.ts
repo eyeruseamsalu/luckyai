@@ -143,7 +143,11 @@ export async function updateUser(
 			return;
 		}
 
-		const user = await User.findByIdAndUpdate(id, { $set: updates }, { new: true });
+		const user = await User.findByIdAndUpdate(
+			id,
+			{ $set: updates },
+			{ new: true },
+		);
 		if (!user) {
 			next(new ApiError(404, "User not found"));
 			return;
@@ -232,9 +236,7 @@ export async function createCrownDraw(
 			};
 
 		if (!name || !jackpotAmount || !drawDate) {
-			next(
-				new ApiError(400, "name, jackpotAmount, and drawDate are required"),
-			);
+			next(new ApiError(400, "name, jackpotAmount, and drawDate are required"));
 			return;
 		}
 
@@ -270,7 +272,8 @@ export async function editCrownDraw(
 		const updates: Record<string, unknown> = {};
 		for (const key of allowedFields) {
 			if (req.body[key] !== undefined) {
-				updates[key] = key === "drawDate" ? new Date(req.body[key]) : req.body[key];
+				updates[key] =
+					key === "drawDate" ? new Date(req.body[key]) : req.body[key];
 			}
 		}
 

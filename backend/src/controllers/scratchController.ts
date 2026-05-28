@@ -130,8 +130,7 @@ export async function play(
 			Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
 		);
 
-		const isNewDay =
-			!user.lastPlayDate || user.lastPlayDate < startOfToday;
+		const isNewDay = !user.lastPlayDate || user.lastPlayDate < startOfToday;
 		const currentPlaysToday = isNewDay ? 0 : (user.playsToday ?? 0);
 		const upcomingPlaysToday = currentPlaysToday + 1;
 		const cashCapHit = upcomingPlaysToday >= CASH_CAP_PLAYS;
@@ -169,7 +168,7 @@ export async function play(
 		// Apply asset-tier boosts
 		if (prize.tier === "asset" && prize.boostLabel) {
 			if (prize.boostLabel === "2x Stars next 5 plays") {
-				$set["activeBoosts"] = [
+				$set.activeBoosts = [
 					...(user.activeBoosts ?? []),
 					{
 						type: "multiplier",
@@ -181,7 +180,7 @@ export async function play(
 					},
 				];
 			} else if (prize.boostLabel === "Loss protection x3") {
-				$set["activeBoosts"] = [
+				$set.activeBoosts = [
 					...(user.activeBoosts ?? []),
 					{
 						type: "lossProtection",

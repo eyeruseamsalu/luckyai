@@ -135,10 +135,7 @@ test.describe("Spin Game - API", () => {
 	test("Cost deducted from balance before winnings added", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-deduction@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-deduction@e2e.test");
 		await depositFunds(request, token, 100);
 
 		const walletBefore = await getWallet(request, token);
@@ -153,10 +150,7 @@ test.describe("Spin Game - API", () => {
 	test("Cash win increments streak, loss resets streak", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-streak@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-streak@e2e.test");
 		await depositFunds(request, token, 500);
 
 		// Play multiple rounds to observe streak behavior
@@ -208,10 +202,7 @@ test.describe("Spin Game - API", () => {
 	test("Ticket win awards ticket and shows wonTicket > 0", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-ticket@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-ticket@e2e.test");
 		await depositFunds(request, token, 500);
 
 		let foundTicket = false;
@@ -236,10 +227,7 @@ test.describe("Spin Game - API", () => {
 	});
 
 	test("Premium win sets premium flag", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-premium@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-premium@e2e.test");
 		await depositFunds(request, token, 500);
 
 		let foundPremium = false;
@@ -270,10 +258,7 @@ test.describe("Spin Game - API", () => {
 	});
 
 	test("Lose segment awards consolation stars", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-lose@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-lose@e2e.test");
 		await depositFunds(request, token, 500);
 
 		let foundLose = false;
@@ -335,10 +320,7 @@ test.describe("Spin Game - API", () => {
 	test("History endpoint returns rounds after multiple plays", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-history@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-history@e2e.test");
 		await depositFunds(request, token, 100);
 
 		const roundsPlayed = 3;
@@ -346,10 +328,7 @@ test.describe("Spin Game - API", () => {
 			await spinPlay(request, token, 5);
 		}
 
-		const res = await request.get(
-			"/api/games/spin/history",
-			auth(token),
-		);
+		const res = await request.get("/api/games/spin/history", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -377,10 +356,7 @@ test.describe("Spin Game - API", () => {
 			"spin-history-empty@e2e.test",
 		);
 
-		const res = await request.get(
-			"/api/games/spin/history",
-			auth(token),
-		);
+		const res = await request.get("/api/games/spin/history", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -409,10 +385,7 @@ test.describe("Spin Game - API", () => {
 	});
 
 	test("Cash cap: 8th play triggers cashCapHit", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-cashcap@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-cashcap@e2e.test");
 		await depositFunds(request, token, 5000);
 
 		let lastBody: Record<string, unknown> | null = null;
@@ -435,10 +408,7 @@ test.describe("Spin Game - API", () => {
 	});
 
 	test("Cash cap converts cash winnings to stars", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-cap-stars@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "spin-cap-stars@e2e.test");
 		await depositFunds(request, token, 5000);
 
 		// Play 8 rounds to hit cash cap
@@ -468,13 +438,8 @@ test.describe("Spin Game - API", () => {
 		}
 	});
 
-	test("Cash cap resets next day (playsToday counter)", async ({
-		request,
-	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"spin-cap-reset@e2e.test",
-		);
+	test("Cash cap resets next day (playsToday counter)", async ({ request }) => {
+		const token = await registerAndGetToken(request, "spin-cap-reset@e2e.test");
 		await depositFunds(request, token, 5000);
 
 		for (let i = 0; i < 8; i++) {
@@ -597,15 +562,11 @@ test.describe("Spin Game - Browser", () => {
 
 		// Verify cost buttons
 		for (const cost of ["5 ETB", "15 ETB", "30 ETB", "50 ETB"]) {
-			await expect(
-				page.getByRole("button", { name: cost }),
-			).toBeVisible();
+			await expect(page.getByRole("button", { name: cost })).toBeVisible();
 		}
 
 		// Verify spin button
-		await expect(
-			page.getByRole("button", { name: /spin/i }),
-		).toBeVisible();
+		await expect(page.getByRole("button", { name: /spin/i })).toBeVisible();
 
 		// Verify prize table
 		await expect(page.getByText("Prize table")).toBeVisible();
@@ -635,16 +596,11 @@ test.describe("Spin Game - Browser", () => {
 			"Free Crown Draw ticket",
 			"Premium access",
 		];
-		const matchesOutcome = validOutcomes.some((o) =>
-			toastText!.includes(o),
-		);
+		const matchesOutcome = validOutcomes.some((o) => toastText!.includes(o));
 		expect(matchesOutcome).toBe(true);
 	});
 
-	test("Spin button works and shows result", async ({
-		page,
-		request,
-	}) => {
+	test("Spin button works and shows result", async ({ page, request }) => {
 		await setupLoggedInPage(page, request, "spin-ui-button@e2e.test");
 
 		// Click the spin button
@@ -655,10 +611,7 @@ test.describe("Spin Game - Browser", () => {
 		await expect(toast).toBeVisible({ timeout: 8_000 });
 	});
 
-	test("Insufficient balance shows warning", async ({
-		page,
-		request,
-	}) => {
+	test("Insufficient balance shows warning", async ({ page, request }) => {
 		const token = await registerAndGetToken(
 			request,
 			"spin-ui-insufficient@e2e.test",
@@ -676,10 +629,7 @@ test.describe("Spin Game - Browser", () => {
 		await expect(toast).toContainText("Insufficient balance");
 	});
 
-	test("Cost selector changes active cost tier", async ({
-		page,
-		request,
-	}) => {
+	test("Cost selector changes active cost tier", async ({ page, request }) => {
 		await setupLoggedInPage(page, request, "spin-ui-costs@e2e.test");
 
 		// Click a different cost tier
@@ -692,10 +642,7 @@ test.describe("Spin Game - Browser", () => {
 		await expect(toast).toBeVisible({ timeout: 8_000 });
 	});
 
-	test("Multiple spins work sequentially", async ({
-		page,
-		request,
-	}) => {
+	test("Multiple spins work sequentially", async ({ page, request }) => {
 		await setupLoggedInPage(page, request, "spin-ui-multi@e2e.test", 200);
 
 		// Play 2 spins
@@ -712,10 +659,7 @@ test.describe("Spin Game - Browser", () => {
 		await expect(page.getByText(/total spins/i)).toBeVisible();
 	});
 
-	test("Prize table displays all segment types", async ({
-		page,
-		request,
-	}) => {
+	test("Prize table displays all segment types", async ({ page, request }) => {
 		await setupLoggedInPage(page, request, "spin-ui-table@e2e.test");
 
 		// Prize table should show labels like ETB, Stars, Ticket, Premium

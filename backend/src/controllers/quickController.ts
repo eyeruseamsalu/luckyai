@@ -35,10 +35,7 @@ export async function play(
 			new Set(picks).size !== 3
 		) {
 			next(
-				new ApiError(
-					400,
-					"Picks must be 3 unique integers between 1 and 20",
-				),
+				new ApiError(400, "Picks must be 3 unique integers between 1 and 20"),
 			);
 			return;
 		}
@@ -69,8 +66,7 @@ export async function play(
 			Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
 		);
 
-		const isNewDay =
-			!user.lastPlayDate || user.lastPlayDate < startOfToday;
+		const isNewDay = !user.lastPlayDate || user.lastPlayDate < startOfToday;
 		const currentPlaysToday = isNewDay ? 0 : user.playsToday;
 		const upcomingPlaysToday = currentPlaysToday + 1;
 		const cashCapHit = upcomingPlaysToday >= CASH_CAP_PLAYS;
@@ -91,13 +87,9 @@ export async function play(
 
 		// Check multiplier boost
 		const nowMs = now.getTime();
-		const activeMultiplier = (
-			user.activeBoosts ?? []
-		).find(
+		const activeMultiplier = (user.activeBoosts ?? []).find(
 			(b) =>
-				b.type === "multiplier" &&
-				b.expiresAt &&
-				b.expiresAt.getTime() > nowMs,
+				b.type === "multiplier" && b.expiresAt && b.expiresAt.getTime() > nowMs,
 		);
 		const multiplier = activeMultiplier ? 1.2 : 1;
 
@@ -121,8 +113,7 @@ export async function play(
 		}
 
 		// Determine tier
-		const tier =
-			cost === 10 ? "Max" : cost === 5 ? "Standard" : "Basic";
+		const tier = cost === 10 ? "Max" : cost === 5 ? "Standard" : "Basic";
 
 		// If cash cap is hit, convert cash winnings to stars
 		if (cashCapHit && wonCash > 0) {

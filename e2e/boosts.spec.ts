@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import mongoose from "mongoose";
-import { clearDatabase } from "./helpers/db";
 import { registerUser } from "./helpers/auth";
+import { clearDatabase } from "./helpers/db";
 
 const auth = (token: string) => ({
 	headers: { Authorization: `Bearer ${token}` },
@@ -20,10 +20,7 @@ async function registerAndGetToken(
 	return body.token as string;
 }
 
-async function setStarsBalance(
-	email: string,
-	amount: number,
-) {
+async function setStarsBalance(email: string, amount: number) {
 	const User = mongoose.models.User;
 	await User.findOneAndUpdate({ email }, { starsBalance: amount });
 }
@@ -52,10 +49,7 @@ test.describe("Boost API", () => {
 	test("activate multiplier boost adds active boost and deducts stars", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"boost-activate@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "boost-activate@e2e.test");
 		await setStarsBalance("boost-activate@e2e.test", 500);
 
 		const res = await request.post("/api/boosts/activate", {
@@ -78,13 +72,8 @@ test.describe("Boost API", () => {
 		expect(user.activeBoosts[0].expiresAfter).toBe(5);
 	});
 
-	test("activate lossProtection boost works correctly", async ({
-		request,
-	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"boost-loss@e2e.test",
-		);
+	test("activate lossProtection boost works correctly", async ({ request }) => {
+		const token = await registerAndGetToken(request, "boost-loss@e2e.test");
 		await setStarsBalance("boost-loss@e2e.test", 500);
 
 		const res = await request.post("/api/boosts/activate", {
@@ -104,10 +93,7 @@ test.describe("Boost API", () => {
 	test("activate premiumDay boost sets isPremium and premiumExpiresAt", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"boost-premium@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "boost-premium@e2e.test");
 		await setStarsBalance("boost-premium@e2e.test", 500);
 
 		const res = await request.post("/api/boosts/activate", {
@@ -131,9 +117,7 @@ test.describe("Boost API", () => {
 		);
 	});
 
-	test("activate with insufficient stars returns 400", async ({
-		request,
-	}) => {
+	test("activate with insufficient stars returns 400", async ({ request }) => {
 		const token = await registerAndGetToken(
 			request,
 			"boost-insufficient@e2e.test",
@@ -223,10 +207,7 @@ test.describe("Boost API", () => {
 	});
 
 	test("list returns active boosts", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"boost-list@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "boost-list@e2e.test");
 		await setStarsBalance("boost-list@e2e.test", 500);
 
 		const emptyRes = await request.get("/api/boosts", auth(token));
@@ -322,10 +303,22 @@ test.describe("Boost API", () => {
 
 	test("unauthenticated requests return 401", async ({ request }) => {
 		for (const endpoint of [
-			{ method: "post" as const, path: "/api/boosts/activate", data: { type: "multiplier" } },
-			{ method: "post" as const, path: "/api/boosts/deactivate", data: { type: "multiplier" } },
+			{
+				method: "post" as const,
+				path: "/api/boosts/activate",
+				data: { type: "multiplier" },
+			},
+			{
+				method: "post" as const,
+				path: "/api/boosts/deactivate",
+				data: { type: "multiplier" },
+			},
 			{ method: "get" as const, path: "/api/boosts" },
-			{ method: "post" as const, path: "/api/boosts/consume", data: { type: "multiplier" } },
+			{
+				method: "post" as const,
+				path: "/api/boosts/consume",
+				data: { type: "multiplier" },
+			},
 		]) {
 			const res = await request[method](endpoint.path, {
 				...(endpoint.data && { data: endpoint.data }),

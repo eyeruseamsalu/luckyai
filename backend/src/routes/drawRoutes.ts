@@ -1,12 +1,17 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.js";
-import { enter, suggest, entries, activeDraw } from "../controllers/crownController.js";
 import {
-	enter as weeklyEnter,
+	activeDraw,
+	enter,
+	entries,
+	suggest,
+} from "../controllers/crownController.js";
+import {
 	currentRound,
-	result as weeklyResult,
+	enter as weeklyEnter,
 	entries as weeklyEntries,
+	result as weeklyResult,
 } from "../controllers/weeklyController.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 

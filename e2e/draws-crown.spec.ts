@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import mongoose from "mongoose";
-import { clearDatabase } from "./helpers/db";
 import { registerUser } from "./helpers/auth";
+import { clearDatabase } from "./helpers/db";
 
 const auth = (token: string) => ({
 	headers: { Authorization: `Bearer ${token}` },
@@ -218,16 +218,11 @@ test.describe("Crown Draw API", () => {
 		const user = await mongoose.model("User").findOne({
 			email: "crown-suggest-limit@e2e.test",
 		});
-		await mongoose
-			.model("User")
-			.findByIdAndUpdate(user!._id, { balance: 1 });
+		await mongoose.model("User").findByIdAndUpdate(user!._id, { balance: 1 });
 
 		// Call suggest 3 times (should all succeed)
 		for (let i = 0; i < 3; i++) {
-			const res = await request.post(
-				"/api/draws/crown/suggest",
-				auth(token),
-			);
+			const res = await request.post("/api/draws/crown/suggest", auth(token));
 			expect(res.status()).toBe(200);
 			const body = await res.json();
 			expect(body.success).toBe(true);
@@ -263,10 +258,7 @@ test.describe("Crown Draw API", () => {
 		});
 
 		// Now fetch entries
-		const res = await request.get(
-			"/api/draws/crown/entries",
-			auth(token),
-		);
+		const res = await request.get("/api/draws/crown/entries", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();

@@ -1,8 +1,17 @@
 import { Router } from "express";
+import {
+	history as quickHistory,
+	play as quickPlay,
+} from "../controllers/quickController.js";
+import {
+	history as scratchHistory,
+	play as scratchPlay,
+} from "../controllers/scratchController.js";
+import {
+	history as spinHistory,
+	play as spinPlay,
+} from "../controllers/spinController.js";
 import { requireAuth } from "../middleware/auth.js";
-import { play as quickPlay, history as quickHistory } from "../controllers/quickController.js";
-import { play as spinPlay, history as spinHistory } from "../controllers/spinController.js";
-import { play as scratchPlay, history as scratchHistory } from "../controllers/scratchController.js";
 
 const router = Router();
 

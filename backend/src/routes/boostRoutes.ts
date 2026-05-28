@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.js";
 import {
 	activate,
+	consume,
 	deactivate,
 	list,
-	consume,
 } from "../controllers/boostController.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 

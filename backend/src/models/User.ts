@@ -12,7 +12,11 @@ const userSchema = new Schema(
 		},
 		phone: { type: String, default: "" },
 		passwordHash: { type: String, required: true },
-		role: { type: String, enum: ["user", "admin", "suspended"], default: "user" },
+		role: {
+			type: String,
+			enum: ["user", "admin", "suspended"],
+			default: "user",
+		},
 		balance: { type: Number, default: 0 },
 		starsBalance: { type: Number, default: 0 },
 		isPremium: { type: Boolean, default: false },
@@ -25,7 +29,10 @@ const userSchema = new Schema(
 		lastPlayDate: { type: Date, default: null },
 		activeBoosts: [
 			{
-				type: { type: String, enum: ["multiplier", "lossProtection", "premiumDay"] },
+				type: {
+					type: String,
+					enum: ["multiplier", "lossProtection", "premiumDay"],
+				},
 				label: { type: String },
 				icon: { type: String },
 				expiresAfter: { type: Number },

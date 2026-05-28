@@ -8,7 +8,11 @@ const userSchema = new mongoose.Schema(
 		name: { type: String, required: true },
 		email: { type: String, required: true, unique: true },
 		passwordHash: { type: String, required: true },
-		role: { type: String, enum: ["user", "admin"], default: "user" },
+		role: {
+			type: String,
+			enum: ["user", "admin", "suspended"],
+			default: "user",
+		},
 	},
 	{ timestamps: true },
 );
@@ -34,7 +38,7 @@ export async function seedRegularUser() {
 	return User.create({
 		name: "Test User",
 		email: "testuser@example.com",
-		password: hash,
+		passwordHash: hash,
 		role: "user",
 	});
 }
@@ -44,7 +48,7 @@ export async function seedAdminUser() {
 	return User.create({
 		name: "Admin User",
 		email: "admin@example.com",
-		password: hash,
+		passwordHash: hash,
 		role: "admin",
 	});
 }
@@ -68,7 +72,11 @@ export async function seedGames() {
 	]);
 }
 
-export async function seedAll() {
+export async function seedAll(clearFirst = false) {
+	if (clearFirst) {
+		await User.deleteMany({});
+		await Game.deleteMany({});
+	}
 	await seedRegularUser();
 	await seedAdminUser();
 	await seedGames();

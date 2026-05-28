@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import mongoose from "mongoose";
+import { registerUser } from "./helpers/auth";
 import { clearDatabase } from "./helpers/db";
-import { loginUser, registerUser } from "./helpers/auth";
 
 const auth = (token: string) => ({
 	headers: { Authorization: `Bearer ${token}` },
@@ -36,10 +36,7 @@ test.describe("Tickets API", () => {
 	test("GET /api/tickets returns empty array for new user", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"tickets-empty@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "tickets-empty@e2e.test");
 
 		const res = await request.get("/api/tickets", auth(token));
 		expect(res.status()).toBe(200);
@@ -52,10 +49,7 @@ test.describe("Tickets API", () => {
 	test("enter Crown Draw creates a ticket visible via GET /api/tickets", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"tickets-crown@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "tickets-crown@e2e.test");
 
 		// Deposit 500 ETB for crown draw entry (cash type)
 		const depositRes = await request.post("/api/wallet/deposit", {
@@ -85,10 +79,7 @@ test.describe("Tickets API", () => {
 	test("enter Weekly Draw creates a ticket visible via GET /api/tickets", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"tickets-weekly@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "tickets-weekly@e2e.test");
 
 		// Credit the user 800 stars directly so weekly entry succeeds
 		await mongoose.connection.db

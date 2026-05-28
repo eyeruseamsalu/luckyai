@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import { clearDatabase } from "./helpers/db";
 import { loginUser, registerUser } from "./helpers/auth";
+import { clearDatabase } from "./helpers/db";
 
 const auth = (token: string) => ({
 	headers: { Authorization: `Bearer ${token}` },
@@ -57,7 +57,10 @@ test.describe("Admin API", () => {
 	// Overview
 	// -----------------------------------------------------------------------
 	test("admin overview returns stats", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-overview@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-overview@e2e.test",
+		);
 
 		const hash = await bcrypt.hash("pw", 10);
 		await mongoose.model("User").create({
@@ -70,7 +73,9 @@ test.describe("Admin API", () => {
 			email: "user2@e2e.test",
 			passwordHash: hash,
 		});
-		const adminUser = await mongoose.model("User").findOne({ email: "admin-overview@e2e.test" });
+		const adminUser = await mongoose
+			.model("User")
+			.findOne({ email: "admin-overview@e2e.test" });
 		await mongoose.model("Transaction").create({
 			userId: adminUser!._id,
 			type: "in",
@@ -112,7 +117,10 @@ test.describe("Admin API", () => {
 	// Users
 	// -----------------------------------------------------------------------
 	test("get users returns paginated list", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-users-list@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-users-list@e2e.test",
+		);
 
 		const hash = await bcrypt.hash("pw", 10);
 		await mongoose.model("User").create({
@@ -126,10 +134,7 @@ test.describe("Admin API", () => {
 			passwordHash: hash,
 		});
 
-		const res = await request.get(
-			"/api/admin/users?limit=10",
-			auth(token),
-		);
+		const res = await request.get("/api/admin/users?limit=10", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -147,8 +152,13 @@ test.describe("Admin API", () => {
 		expect(u.role).toBeDefined();
 	});
 
-	test("get users with search returns filtered results", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-users-search@e2e.test");
+	test("get users with search returns filtered results", async ({
+		request,
+	}) => {
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-users-search@e2e.test",
+		);
 
 		const hash = await bcrypt.hash("pw", 10);
 		await mongoose.model("User").create({
@@ -170,7 +180,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("update user changes fields", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-user-update@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-user-update@e2e.test",
+		);
 
 		const hash = await bcrypt.hash("pw", 10);
 		const user = await mongoose.model("User").create({
@@ -179,13 +192,10 @@ test.describe("Admin API", () => {
 			passwordHash: hash,
 		});
 
-		const res = await request.put(
-			`/api/admin/users/${user._id}`,
-			{
-				data: { name: "New Name", isPremium: true },
-				...auth(token),
-			},
-		);
+		const res = await request.put(`/api/admin/users/${user._id}`, {
+			data: { name: "New Name", isPremium: true },
+			...auth(token),
+		});
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -199,7 +209,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("suspend user sets role to suspended", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-suspend@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-suspend@e2e.test",
+		);
 
 		const hash = await bcrypt.hash("pw", 10);
 		const user = await mongoose.model("User").create({
@@ -223,7 +236,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("activate user sets role to user", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-activate@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-activate@e2e.test",
+		);
 
 		const hash = await bcrypt.hash("pw", 10);
 		const user = await mongoose.model("User").create({
@@ -233,10 +249,7 @@ test.describe("Admin API", () => {
 			role: "suspended",
 		});
 
-		await request.put(
-			`/api/admin/users/${user._id}/activate`,
-			auth(token),
-		);
+		await request.put(`/api/admin/users/${user._id}/activate`, auth(token));
 
 		const dbUser = await mongoose.model("User").findById(user._id);
 		expect(dbUser!.role).toBe("user");
@@ -246,19 +259,19 @@ test.describe("Admin API", () => {
 	// Crown Draws
 	// -----------------------------------------------------------------------
 	test("create crown draw returns new draw", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-crown-create@e2e.test");
-
-		const res = await request.post(
-			"/api/admin/draws/crown",
-			{
-				data: {
-					name: "Test Draw",
-					jackpotAmount: 100000,
-					drawDate: new Date(Date.now() + 30 * 86400000).toISOString(),
-				},
-				...auth(token),
-			},
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-crown-create@e2e.test",
 		);
+
+		const res = await request.post("/api/admin/draws/crown", {
+			data: {
+				name: "Test Draw",
+				jackpotAmount: 100000,
+				drawDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+			},
+			...auth(token),
+		});
 		expect(res.status()).toBe(201);
 
 		const body = await res.json();
@@ -270,7 +283,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("get crown draws returns all draws", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-crown-list@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-crown-list@e2e.test",
+		);
 
 		const CrownDraw = mongoose.model("CrownDraw");
 		await CrownDraw.create({
@@ -302,7 +318,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("run crown draw executes and finds winners", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-crown-run@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-crown-run@e2e.test",
+		);
 
 		const CrownDraw = mongoose.model("CrownDraw");
 		const CrownDrawEntry = mongoose.model("CrownDrawEntry");
@@ -351,7 +370,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("cancel crown draw sets status to cancelled", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-crown-cancel@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-crown-cancel@e2e.test",
+		);
 
 		const CrownDraw = mongoose.model("CrownDraw");
 		const draw = await CrownDraw.create({
@@ -378,12 +400,15 @@ test.describe("Admin API", () => {
 	// Weekly Draws
 	// -----------------------------------------------------------------------
 	test("create weekly draw creates new round", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-weekly-create@e2e.test");
-
-		const res = await request.post(
-			"/api/admin/draws/weekly",
-			{ data: {}, ...auth(token) },
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-weekly-create@e2e.test",
 		);
+
+		const res = await request.post("/api/admin/draws/weekly", {
+			data: {},
+			...auth(token),
+		});
 		expect(res.status()).toBe(201);
 
 		const body = await res.json();
@@ -393,8 +418,13 @@ test.describe("Admin API", () => {
 		expect(body.draw.status).toBe("open");
 	});
 
-	test("run weekly draw executes and distributes prizes", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-weekly-run@e2e.test");
+	test("run weekly draw executes and distributes prizes", async ({
+		request,
+	}) => {
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-weekly-run@e2e.test",
+		);
 
 		const WeeklyDraw = mongoose.model("WeeklyDraw");
 		const WeeklyEntry = mongoose.model("WeeklyEntry");
@@ -434,7 +464,10 @@ test.describe("Admin API", () => {
 	// Game Config
 	// -----------------------------------------------------------------------
 	test("get game config returns values", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-gamecfg@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-gamecfg@e2e.test",
+		);
 
 		const res = await request.get("/api/admin/config/game", auth(token));
 		expect(res.status()).toBe(200);
@@ -446,15 +479,15 @@ test.describe("Admin API", () => {
 	});
 
 	test("update game config persists", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-gamecfg-upd@e2e.test");
-
-		const res = await request.put(
-			"/api/admin/config/game",
-			{
-				data: { spinCost: 10, scratchCost: 8 },
-				...auth(token),
-			},
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-gamecfg-upd@e2e.test",
 		);
+
+		const res = await request.put("/api/admin/config/game", {
+			data: { spinCost: 10, scratchCost: 8 },
+			...auth(token),
+		});
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -471,7 +504,10 @@ test.describe("Admin API", () => {
 	// Platform Config
 	// -----------------------------------------------------------------------
 	test("get platform config returns values", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-platcfg@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-platcfg@e2e.test",
+		);
 
 		const res = await request.get("/api/admin/config/platform", auth(token));
 		expect(res.status()).toBe(200);
@@ -483,15 +519,15 @@ test.describe("Admin API", () => {
 	});
 
 	test("update platform config persists", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-platcfg-upd@e2e.test");
-
-		const res = await request.put(
-			"/api/admin/config/platform",
-			{
-				data: { platformName: "My Platform", supportEmail: "admin@test.com" },
-				...auth(token),
-			},
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-platcfg-upd@e2e.test",
 		);
+
+		const res = await request.put("/api/admin/config/platform", {
+			data: { platformName: "My Platform", supportEmail: "admin@test.com" },
+			...auth(token),
+		});
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -503,8 +539,13 @@ test.describe("Admin API", () => {
 	// -----------------------------------------------------------------------
 	// Economy Config
 	// -----------------------------------------------------------------------
-	test("get economy config returns star rate and items", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-economy@e2e.test");
+	test("get economy config returns star rate and items", async ({
+		request,
+	}) => {
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-economy@e2e.test",
+		);
 
 		await mongoose.model("ShopItem").create({
 			key: "bonus-draw",
@@ -523,15 +564,15 @@ test.describe("Admin API", () => {
 	});
 
 	test("update star rate persists", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-star-rate@e2e.test");
-
-		const res = await request.put(
-			"/api/admin/config/economy/star-rate",
-			{
-				data: { rate: 50 },
-				...auth(token),
-			},
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-star-rate@e2e.test",
 		);
+
+		const res = await request.put("/api/admin/config/economy/star-rate", {
+			data: { rate: 50 },
+			...auth(token),
+		});
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -544,7 +585,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("get economy items returns shop items", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-econ-items@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-econ-items@e2e.test",
+		);
 
 		await mongoose.model("ShopItem").create({
 			key: "test-item",
@@ -566,7 +610,10 @@ test.describe("Admin API", () => {
 	});
 
 	test("update item cost changes star cost", async ({ request }) => {
-		const token = await createAdminAndGetToken(request, "admin-item-cost@e2e.test");
+		const token = await createAdminAndGetToken(
+			request,
+			"admin-item-cost@e2e.test",
+		);
 
 		await mongoose.model("ShopItem").create({
 			key: "multiplier",
@@ -588,7 +635,9 @@ test.describe("Admin API", () => {
 		expect(body.success).toBe(true);
 		expect(body.item.starCost).toBe(200);
 
-		const item = await mongoose.model("ShopItem").findOne({ key: "multiplier" });
+		const item = await mongoose
+			.model("ShopItem")
+			.findOne({ key: "multiplier" });
 		expect(item!.starCost).toBe(200);
 	});
 
@@ -596,7 +645,10 @@ test.describe("Admin API", () => {
 	// Auth — non-admin gets 403
 	// -----------------------------------------------------------------------
 	test("non-admin gets 403 on user list", async ({ request }) => {
-		const token = await registerAndGetToken(request, "regular-forbidden@e2e.test");
+		const token = await registerAndGetToken(
+			request,
+			"regular-forbidden@e2e.test",
+		);
 
 		const endpoints = [
 			"/api/admin/users",
@@ -617,7 +669,9 @@ test.describe("Admin API", () => {
 		}
 	});
 
-	test("unauthenticated request returns 401 on admin endpoints", async ({ request }) => {
+	test("unauthenticated request returns 401 on admin endpoints", async ({
+		request,
+	}) => {
 		const endpoints = [
 			"/api/admin/overview",
 			"/api/admin/users",

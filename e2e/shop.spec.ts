@@ -77,10 +77,7 @@ test.describe("Shop API", () => {
 	test("purchase a multiplier boost deducts stars and activates boost", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"shop-boost@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "shop-boost@e2e.test");
 		await addStars("shop-boost@e2e.test", 500);
 
 		let user = await getUser("shop-boost@e2e.test");
@@ -118,10 +115,7 @@ test.describe("Shop API", () => {
 	test("purchase crown ticket increments tickets and creates Ticket document", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"shop-ticket@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "shop-ticket@e2e.test");
 		await addStars("shop-ticket@e2e.test", 2000);
 
 		let user = await getUser("shop-ticket@e2e.test");
@@ -151,10 +145,7 @@ test.describe("Shop API", () => {
 	test("purchase mystery box adds random stars and returns mysteryWon", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"shop-mystery@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "shop-mystery@e2e.test");
 		await addStars("shop-mystery@e2e.test", 500);
 
 		let user = await getUser("shop-mystery@e2e.test");
@@ -188,9 +179,7 @@ test.describe("Shop API", () => {
 		expect(txns[1].desc).toContain("Mystery Box");
 	});
 
-	test("purchase with insufficient stars returns 400", async ({
-		request,
-	}) => {
+	test("purchase with insufficient stars returns 400", async ({ request }) => {
 		const token = await registerAndGetToken(
 			request,
 			"shop-insufficient@e2e.test",
@@ -211,10 +200,7 @@ test.describe("Shop API", () => {
 	});
 
 	test("purchase non-existent item returns 404", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"shop-notfound@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "shop-notfound@e2e.test");
 		await addStars("shop-notfound@e2e.test", 500);
 
 		const res = await request.post("/api/shop/purchase", {
@@ -229,10 +215,7 @@ test.describe("Shop API", () => {
 	});
 
 	test("purchase without itemKey returns 400", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"shop-nokey@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "shop-nokey@e2e.test");
 
 		const res = await request.post("/api/shop/purchase", {
 			data: {},

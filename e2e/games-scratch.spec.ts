@@ -78,10 +78,7 @@ test.describe("Scratch Play - API", () => {
 	test("Happy path: play with valid cost returns correct response shape", async ({
 		request,
 	}) => {
-		const token = await registerAndGetToken(
-			request,
-			"scratch-happy@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "scratch-happy@e2e.test");
 		await depositFunds(request, token, 100);
 
 		const { status, body } = await scratchPlay(request, token, 5);
@@ -112,10 +109,7 @@ test.describe("Scratch Play - API", () => {
 	});
 
 	test("All cost tiers (5, 10, 25, 50) succeed", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"scratch-costs@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "scratch-costs@e2e.test");
 		await depositFunds(request, token, 500);
 
 		for (const cost of [5, 10, 25, 50]) {
@@ -268,10 +262,7 @@ test.describe("Scratch Play - API", () => {
 			await scratchPlay(request, token, 5);
 		}
 
-		const res = await request.get(
-			"/api/games/scratch/history",
-			auth(token),
-		);
+		const res = await request.get("/api/games/scratch/history", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();
@@ -296,10 +287,7 @@ test.describe("Scratch Play - API", () => {
 			"scratch-history-empty@e2e.test",
 		);
 
-		const res = await request.get(
-			"/api/games/scratch/history",
-			auth(token),
-		);
+		const res = await request.get("/api/games/scratch/history", auth(token));
 		expect(res.status()).toBe(200);
 
 		const body = await res.json();

@@ -81,8 +81,7 @@ export async function play(
 			Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
 		);
 
-		const isNewDay =
-			!user.lastPlayDate || user.lastPlayDate < startOfToday;
+		const isNewDay = !user.lastPlayDate || user.lastPlayDate < startOfToday;
 		const currentPlaysToday = isNewDay ? 0 : user.playsToday;
 		const upcomingPlaysToday = currentPlaysToday + 1;
 		const cashCapHit = upcomingPlaysToday >= CASH_CAP_PLAYS;
@@ -93,13 +92,9 @@ export async function play(
 
 		// Check multiplier boost
 		const nowMs = now.getTime();
-		const activeMultiplier = (
-			user.activeBoosts ?? []
-		).find(
+		const activeMultiplier = (user.activeBoosts ?? []).find(
 			(b) =>
-				b.type === "multiplier" &&
-				b.expiresAt &&
-				b.expiresAt.getTime() > nowMs,
+				b.type === "multiplier" && b.expiresAt && b.expiresAt.getTime() > nowMs,
 		);
 		const multiplier = activeMultiplier ? 1.2 : 1;
 

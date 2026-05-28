@@ -48,10 +48,7 @@ export async function enter(
 			new Set(numbers).size !== PICK_COUNT
 		) {
 			next(
-				new ApiError(
-					400,
-					"Numbers must be 6 unique integers between 1 and 42",
-				),
+				new ApiError(400, "Numbers must be 6 unique integers between 1 and 42"),
 			);
 			return;
 		}

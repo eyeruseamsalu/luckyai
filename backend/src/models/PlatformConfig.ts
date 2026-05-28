@@ -8,8 +8,13 @@ const platformConfigSchema = new Schema(
 	{ timestamps: true },
 );
 
-export type PlatformConfigDocument = InferSchemaType<typeof platformConfigSchema> & {
+export type PlatformConfigDocument = InferSchemaType<
+	typeof platformConfigSchema
+> & {
 	_id: mongoose.Types.ObjectId;
 };
 
-export const PlatformConfig = mongoose.model("PlatformConfig", platformConfigSchema);
+export const PlatformConfig = mongoose.model(
+	"PlatformConfig",
+	platformConfigSchema,
+);

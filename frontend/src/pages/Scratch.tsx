@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { toast } from "sonner";
+import { playGame } from "@/lib/api";
 import BonusMode from "../components/BonusMode";
 import { useStore } from "../store";
 import { t } from "../translations";
-import { playGame } from "@/lib/api";
-import { toast } from "sonner";
 
 const CARD_NAMES = [
 	"Timkat",
@@ -81,11 +81,7 @@ function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
 			);
 			if (res.wonCash > 0) {
 				store.addBalance(res.wonCash);
-				store.addTransaction(
-					`Scratch Win — ${name}`,
-					res.wonCash,
-					"in",
-				);
+				store.addTransaction(`Scratch Win — ${name}`, res.wonCash, "in");
 			}
 			if (res.wonStars > 0) {
 				store.addStars(res.wonStars);
@@ -128,11 +124,7 @@ function ScratchCard({ index, setKey, cost, onReveal }: CardProps) {
 						borderRadius: 16,
 						background: canAfford ? "#EEEDFE" : "var(--bg)",
 						border: `1.5px solid ${canAfford ? "#C4BEFA" : "var(--border2)"}`,
-						cursor: playing
-							? "wait"
-							: canAfford
-								? "pointer"
-								: "not-allowed",
+						cursor: playing ? "wait" : canAfford ? "pointer" : "not-allowed",
 						padding: "18px 14px",
 						display: "flex",
 						flexDirection: "column",

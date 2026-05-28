@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import mongoose from "mongoose";
-import { clearDatabase } from "./helpers/db";
 import { registerUser } from "./helpers/auth";
+import { clearDatabase } from "./helpers/db";
 
 const auth = (token: string) => ({
 	headers: { Authorization: `Bearer ${token}` },
@@ -115,10 +115,7 @@ test.describe("Weekly Draw API", () => {
 	});
 
 	test("get current round returns an open round", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"weekly-current@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "weekly-current@e2e.test");
 
 		const res = await request.get("/api/draws/weekly/current", auth(token));
 		expect(res.status()).toBe(200);
@@ -150,10 +147,7 @@ test.describe("Weekly Draw API", () => {
 	});
 
 	test("get user entries returns list of entries", async ({ request }) => {
-		const token = await registerAndGetToken(
-			request,
-			"weekly-entries@e2e.test",
-		);
+		const token = await registerAndGetToken(request, "weekly-entries@e2e.test");
 
 		// Award stars and create two entries
 		const user = await mongoose.model("User").findOne({

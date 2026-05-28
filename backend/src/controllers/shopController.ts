@@ -1,19 +1,55 @@
-import type { NextFunction, Request, Response } from "express";
 import { randomInt } from "node:crypto";
+import type { NextFunction, Request, Response } from "express";
 import { ApiError } from "../middleware/errorHandler.js";
+import { Boost } from "../models/Boost.js";
 import { ShopItem } from "../models/ShopItem.js";
+import { Ticket } from "../models/Ticket.js";
 import { Transaction } from "../models/Transaction.js";
 import { User } from "../models/User.js";
-import { Boost } from "../models/Boost.js";
-import { Ticket } from "../models/Ticket.js";
 
 const DEFAULT_ITEMS = [
-	{ key: "multiplier", name: "Multiplier", starCost: 150, type: "boost" as const, description: "2x stars on all wins for 5 plays" },
-	{ key: "lossProtection", name: "Loss Protection", starCost: 80, type: "boost" as const, description: "Refund on next losing play" },
-	{ key: "premiumDay", name: "Premium Day", starCost: 200, type: "premium" as const, description: "24h premium access" },
-	{ key: "crownTicket", name: "Crown Ticket", starCost: 1500, type: "ticket" as const, description: "Crown Draw entry" },
-	{ key: "weeklyTicket", name: "Weekly Ticket", starCost: 800, type: "ticket" as const, description: "Weekly Draw entry" },
-	{ key: "mysteryBox", name: "Mystery Box", starCost: 500, type: "mystery" as const, description: "Random prize (10-1000★)" },
+	{
+		key: "multiplier",
+		name: "Multiplier",
+		starCost: 150,
+		type: "boost" as const,
+		description: "2x stars on all wins for 5 plays",
+	},
+	{
+		key: "lossProtection",
+		name: "Loss Protection",
+		starCost: 80,
+		type: "boost" as const,
+		description: "Refund on next losing play",
+	},
+	{
+		key: "premiumDay",
+		name: "Premium Day",
+		starCost: 200,
+		type: "premium" as const,
+		description: "24h premium access",
+	},
+	{
+		key: "crownTicket",
+		name: "Crown Ticket",
+		starCost: 1500,
+		type: "ticket" as const,
+		description: "Crown Draw entry",
+	},
+	{
+		key: "weeklyTicket",
+		name: "Weekly Ticket",
+		starCost: 800,
+		type: "ticket" as const,
+		description: "Weekly Draw entry",
+	},
+	{
+		key: "mysteryBox",
+		name: "Mystery Box",
+		starCost: 500,
+		type: "mystery" as const,
+		description: "Random prize (10-1000★)",
+	},
 ];
 
 export async function listItems(
@@ -58,7 +94,10 @@ export async function purchase(
 			return;
 		}
 
-		const shopItem = await ShopItem.findOne({ key: itemKey, active: true }).lean();
+		const shopItem = await ShopItem.findOne({
+			key: itemKey,
+			active: true,
+		}).lean();
 
 		if (!shopItem) {
 			next(new ApiError(404, "Shop item not found"));

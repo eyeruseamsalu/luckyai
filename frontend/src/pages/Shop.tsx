@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useStore } from "../store";
-import { getShopItems, purchaseItem } from "../lib/api";
 import { toast } from "sonner";
+import { getShopItems, purchaseItem } from "../lib/api";
+import { useStore } from "../store";
 
 interface ShopItemData {
 	_id: string;
@@ -21,8 +21,15 @@ const TYPE_BADGES: Record<string, { label: string; cls: string }> = {
 };
 
 export default function Shop() {
-	const { state, spendStars, addStars, addBoost, addTicket, setPremium, refreshUser } =
-		useStore();
+	const {
+		state,
+		spendStars,
+		addStars,
+		addBoost,
+		addTicket,
+		setPremium,
+		refreshUser,
+	} = useStore();
 	const [items, setItems] = useState<ShopItemData[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [purchasing, setPurchasing] = useState<string | null>(null);
@@ -78,9 +85,7 @@ export default function Shop() {
 
 			if (data.mysteryWon !== undefined) {
 				addStars(data.mysteryWon);
-				toast.success(
-					`Mystery Box revealed — ${data.mysteryWon} ★ !`,
-				);
+				toast.success(`Mystery Box revealed — ${data.mysteryWon} ★ !`);
 			} else {
 				toast.success(`${item.name} purchased!`);
 			}
@@ -88,9 +93,7 @@ export default function Shop() {
 			refreshUser();
 		} catch (err) {
 			addStars(item.starCost);
-			toast.error(
-				err instanceof Error ? err.message : "Purchase failed",
-			);
+			toast.error(err instanceof Error ? err.message : "Purchase failed");
 		} finally {
 			setPurchasing(null);
 		}
